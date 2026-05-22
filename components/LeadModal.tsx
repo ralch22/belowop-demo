@@ -1,0 +1,268 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { X, CheckCircle2 } from 'lucide-react';
+import type { Listing } from '@/lib/listings';
+import { formatAED, dropPct, dropColor, bedsLabel, imageUrl, formatSqm } from '@/lib/format';
+
+const FOCUSABLE_SEL =
+  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
+
+export default function LeadModal({
+  listing,
+  onClose,
+}: {
+  listing: Listing;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    nameRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    // Remember whatever had focus before the modal opened, so we can restore
+    // it on close (typically the row/card that triggered the inquiry).
+    previouslyFocused.current = (document.activeElement as HTMLElement) ?? null;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      // Focus trap — cycle Tab / Shift-Tab within the dialog.
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SEL),
+      ).filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+
+    // Hide the rest of the page from assistive tech while the dialog is open.
+    const main = document.querySelector('main');
+    const nav = document.querySelector('header');
+    const footer = document.querySelector('footer');
+    const hidden: HTMLElement[] = [];
+    [main, nav, footer].forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.setAttribute('aria-hidden', 'true');
+        // `inert` isn't honoured everywhere yet, but it's a no-op where unsupported.
+        el.setAttribute('inert', '');
+        hidden.push(el);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      hidden.forEach((el) => {
+        el.removeAttribute('aria-hidden');
+        el.removeAttribute('inert');
+      });
+      // Restore focus to whatever opened the modal.
+      previouslyFocused.current?.focus?.();
+    };
+  }, [onClose]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name || !phone || !consent) return;
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, phone, message, listing_ref: listing.ref, consent }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string };
+      if (!res.ok || !data.ok) {
+        // Server returned an error — most commonly the 429 daily limit. Show it
+        // inline rather than pretending the inquiry went through.
+        const friendly =
+          res.status === 429
+            ? (data.message ?? "You've reached today's inquiry limit. Try again tomorrow.")
+            : (data.message ?? data.error ?? "Couldn't send. Please try again.");
+        setSubmitting(false);
+        setErrorMsg(friendly);
+        return;
+      }
+      setSubmitting(false);
+      setDone(true);
+      setTimeout(onClose, 3200);
+    } catch {
+      setSubmitting(false);
+      setErrorMsg("Couldn't reach the server. Check your connection and retry.");
+    }
+  }
+
+  const delta = dropPct(listing.currentPrice, listing.originalPrice);
+  const thumbSrc = listing.imageUrl ?? imageUrl(listing.imageId, 200);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lead-title"
+    >
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        ref={dialogRef}
+        className="relative w-full max-w-md rounded-t-2xl sm:rounded-lg bg-white p-5 shadow-modal dark:bg-slate-900 max-h-[92vh] overflow-y-auto"
+      >
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-400 dark:hover:bg-slate-800"
+        >
+          <X size={18} />
+        </button>
+
+        {done ? (
+          <div className="py-8 text-center">
+            <CheckCircle2 className="mx-auto text-green-600 dark:text-green-400" size={48} />
+            <h3 className="mt-3 text-lg font-semibold">Thanks. Rami will WhatsApp you shortly.</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Usually within the hour during business hours.</p>
+          </div>
+        ) : (
+          <>
+            <h3 id="lead-title" className="text-lg font-semibold pr-8">Get details on this unit</h3>
+
+            <div className="mt-4 flex gap-3 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700">
+                <Image
+                  src={thumbSrc}
+                  alt={listing.project}
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{listing.project}{listing.subLocation ? `, ${listing.subLocation}` : ''}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{listing.developer} · {listing.community}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  {listing.unitType ?? bedsLabel(listing.beds)}{listing.bathrooms ? ` · ${listing.bathrooms} Bath` : ''} · {formatSqm(listing.sqft)}
+                </p>
+                {listing.handover && listing.type === 'off_plan' && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Handover: {listing.handover}{listing.paymentStatus ? ` · ${listing.paymentStatus}` : ''}</p>
+                )}
+                {listing.features && listing.features.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {listing.features.slice(0, 4).map((f) => (
+                      <span key={f} className="inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">{f}</span>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2 font-mono text-sm tabular-nums">
+                  AED {formatAED(listing.currentPrice)}{' '}
+                  <span className={`font-semibold ${dropColor(delta)}`}>{delta.toFixed(1)}%</span>
+                  <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={submit} className="mt-4 space-y-3">
+              <Field label="Your name">
+                <input
+                  ref={nameRef}
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
+                  placeholder="Sara A."
+                />
+              </Field>
+              <Field label="WhatsApp number">
+                <div className="flex">
+                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
+                  <input
+                    required
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="block w-full rounded-r-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="50 123 4567"
+                  />
+                </div>
+              </Field>
+              <Field label="Message (optional)">
+                <textarea
+                  rows={3}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
+                  placeholder="Available to view this weekend?"
+                />
+              </Field>
+              <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus-visible:ring-brand"
+                />
+                <span>I agree to the privacy notice & terms.</span>
+              </label>
+              {errorMsg && (
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+                >
+                  {errorMsg}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={!name || !phone || !consent || submitting}
+                className="w-full rounded-md bg-brand py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
+              >
+                {submitting ? 'Sending…' : 'Request details'}
+              </button>
+              <p className="text-center text-xs text-slate-600 dark:text-slate-400">We&apos;ll WhatsApp you back within the hour.</p>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}

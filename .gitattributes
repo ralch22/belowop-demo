@@ -1,0 +1,13 @@
+# Normalise line endings to LF on commit, leaves working dir alone
+* text=auto eol=lf
+
+# Binary files — leave untouched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.ico binary

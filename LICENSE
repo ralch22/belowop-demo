@@ -1,0 +1,19 @@
+Below OP — Dubai Property Tracker
+
+Copyright (c) 2026 Emerge Digital. All rights reserved.
+
+This source code is published for client review and transparency. It is not
+an open-source release. No license — express or implied — is granted to copy,
+modify, redistribute, sublicense, or use this code or any derivative work in
+any other product or service without prior written permission from Emerge
+Digital.
+
+The agent persona files under `.claude/agents/` are derived from the
+upstream `msitarzewski/agency-agents` repository and retain their original
+license terms (see https://github.com/msitarzewski/agency-agents).
+
+Spec documents under `outputs/BelowOP-Handoff/` (PWA_PRD, SRS, UI.md,
+Screens.md, Solution_Architecture, RTM, Variables, CLAUDE.md) are
+confidential and shared with the client (Jad ALCHEIKH) for evaluation only.
+
+For licensing inquiries, contact: rami@emergedigital.com
