@@ -12,7 +12,7 @@
 | Total requirements in RTM | **105** | 100% |
 | ✅ Covered by automated test in this repo | **15** | 14% |
 | 🟡 Covered by manual verification (artefact present, no test in this repo) | **24** | 23% |
-| ⏳ Blocked by external dependency (Twilio template approval, Apify schedule, Vercel/Supabase telemetry, SSL Labs, Lighthouse CI) | **34** | 32% |
+| ⏳ Blocked by external dependency (Apify schedule wiring [top priority], Meta `below_op_alert` template approval [deferred], Vercel/Supabase telemetry, SSL Labs, Lighthouse CI) | **34** | 32% |
 | 🔴 Uncovered — implementation not yet present or no verification path | **32** | 31% |
 
 The RTM is authored against the **production architecture** (Supabase, Apify, R2, Twilio, Resend). The demo codebase is a Vercel/Neon/Blob slice that implements ~40% of that architecture. So "uncovered" here usually means "deferred until prod infra lands," not "forgotten."
@@ -32,12 +32,12 @@ Status legend: ✅ automated · 🟡 manual · 🔴 uncovered · ⏳ blocked-by-
 | SRS-FR-04 | Extract normalised fields | SRS §3.1 | `lib/description-parser.ts`, `lib/op-parser.ts` | `tests/description-parser.test.ts` 36 cases (parseOp, parseHandover, parseView, parseFloor, parsePaymentStatus, parseBua, parsePlotSize, composeUnitType, extractFeatures) | ✅ |
 | SRS-FR-05 | Dedupe + upsert by external_ref | SRS §3.1 | `app/api/webhooks/apify/route.ts`, `db/migrations/0001_init.sql:6` (UNIQUE) | TC-ING-05 — needs test DB | 🔴 |
 | SRS-FR-06 | price_history on change | SRS §3.1 | `app/api/webhooks/apify/route.ts`, `db/migrations/0001_init.sql:32` | TC-ING-06 — needs test DB | 🔴 |
-| SRS-FR-07 | Mark withdrawn after 3 misses | SRS §3.1 | `app/api/webhooks/apify/route.ts` | TC-ING-07 — clock-based integration | 🔴 |
+| SRS-FR-07 | Mark withdrawn after misses | SRS §3.1 | not yet wired — task #66 (decision pinned: **2-miss conservative**, tighter than spec's 3 to ship faster while keeping false-positive risk acceptable) | TC-ING-07 — clock-based integration | 🔴 |
 | SRS-FR-08 | Recover withdrawn → active | SRS §3.1 | `app/api/webhooks/apify/route.ts` | TC-ING-08 | 🔴 |
 | SRS-FR-09 | Realistic UA + jitter | SRS §3.1 | scrapers/* (out of repo) | TC-ING-09 — Apify telemetry | ⏳ |
 | SRS-FR-10 | Webhook in <60s | SRS §3.1 | scrapers/.../webhook.ts (out of repo) | TC-ING-10 — runtime assertion | ⏳ |
 | SRS-FR-11 | **HMAC verify Apify webhook; 401 on bad sig** | SRS §3.1 | `lib/hmac.ts:8` (`verifyHmacSha256`) — **NOT YET wired into `app/api/webhooks/apify/route.ts`** | `tests/hmac.test.ts:41-102` 12 cases (valid/forged/length-mismatch/missing-header/missing-secret) | 🟡 *(util tested; integration wiring pending — see Gaps §3.1)* |
-| SRS-FR-12 | Log scrape_runs counts | SRS §3.1 | `app/api/webhooks/apify/route.ts` | TC-ING-12 — DB inspection | 🟡 |
+| SRS-FR-12 | Log scrape_runs counts | SRS §3.1 | not yet implemented — task #65 (`ingestion_runs` log table queued, paused on Apify schedule) | TC-ING-12 — DB inspection | 🔴 |
 
 ### Table (9 reqs)
 | Req ID | Description | Source | Implementation | Test / verification | Status |
@@ -76,7 +76,7 @@ Status legend: ✅ automated · 🟡 manual · 🔴 uncovered · ⏳ blocked-by-
 | SRS-FR-67 | Throttle 1/30min, 5/day | SRS §3.4 | `app/api/alerts/dispatch/route.ts:111-123` — per-recipient daily (5/day) **and** burst (1/30min) gates via `rateLimit()` on KV | manual: re-queue 6 alert events to same subscriber, confirm 5 dispatch + 1 skipped | 🟡 *(implemented 2026-05-22; KV integration test pending)* |
 | SRS-FR-68 | Quiet hours digest | SRS §3.4 | not implemented | 🔴 | 🔴 |
 | SRS-FR-69 | Telegram bundling | SRS §3.4 | not implemented | 🔴 | 🔴 |
-| SRS-FR-70 | WA templates only | SRS §3.4 | `lib/twilio.ts:36` uses Messages API (free-form) | ⏳ vendor approval | ⏳ |
+| SRS-FR-70 | WA templates only | SRS §3.4 | Twilio path retired; planned via Meta Cloud API direct in `lib/whatsapp.ts` (deferred — see `docs/WhatsApp-Integration-Plan.md`) | ⏳ Meta `below_op_alert` template approval | ⏳ |
 | SRS-FR-71 | Email transactional | SRS §3.4 | `lib/resend.ts` missing | manual | 🔴 |
 | SRS-FR-72 | Signed one-tap unsubscribe | SRS §3.4 | `app/api/unsubscribe/route.ts:6-13` (token-by-equality, **not signed**) | no integration test; **token signing absent** | 🔴 |
 | SRS-FR-73 | Canonical alert structure | SRS §3.4, UI.md §4.5.1 | `lib/alert-format.ts:1-109` (formatWhatsapp, formatTelegram) | **no snapshot test** | 🔴 |
@@ -108,7 +108,7 @@ Status legend: ✅ automated · 🟡 manual · 🔴 uncovered · ⏳ blocked-by-
 | Req ID | Description | Source | Implementation | Test / verification | Status |
 |---|---|---|---|---|---|
 | SRS-FR-99 | WA+TG to operator <30s | UI.md §4.5 | `app/api/leads/route.ts`, `lib/notify.ts` | no integration test | 🔴 |
-| SRS-FR-100b | TPL_BELOWOP_LEAD template | UI.md §4.5.3 | `lib/twilio.ts` (free-form, no template constant) | ⏳ Meta approval | ⏳ |
+| SRS-FR-100b | Lead template | UI.md §4.5.3 | Will share `below_op_alert` template approved for subscriber alerts (single parameterized template strategy — see `docs/WhatsApp-Integration-Plan.md` §3). Twilio path retired. | ⏳ Meta approval | ⏳ |
 | SRS-FR-101b | Lead retained + retry x3 | SRS §3.4c | `app/api/leads/route.ts` (no retry visible) | no test | 🔴 |
 
 ### PWA (6 reqs)

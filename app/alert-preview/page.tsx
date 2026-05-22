@@ -48,7 +48,7 @@ Wa.me/${brokerWa}
 See all units → belowop-demo.vercel.app`}
             </div>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-400">Sandbox sender · TPL_BELOWOP_PRICEDROP (production: Meta-approved template)</p>
+          <p className="mt-2 text-center text-[10px] text-slate-400">Preview only · WhatsApp 1:1 delivery via Meta Cloud API direct (deferred — see docs/WhatsApp-Integration-Plan.md)</p>
         </Phone>
 
         <Phone label="Telegram" tone="blue">
@@ -84,9 +84,10 @@ ${sample.handover && sample.type === 'off_plan' ? `*Handover*: ${sample.handover
       <div className="mt-12 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
         <p className="font-semibold text-slate-900 dark:text-slate-100">Source of truth</p>
         <p className="mt-1 text-xs">
-          Format derived from the broker's existing WhatsApp/Telegram template (<code className="font-mono">Variables.pdf</code>). Real alerts render the same content
-          server-side via <code className="font-mono">/api/alerts/dispatch</code>, with WhatsApp delivered through Twilio (sandbox in dev, Meta-approved template in prod)
-          and Telegram via the official Bot API. Image collage composed at <code className="font-mono">/api/og?ref=…</code>.
+          Format derived from the broker&apos;s existing WhatsApp/Telegram template (<code className="font-mono">Variables.pdf</code>).
+          Real alerts render the same content server-side via <code className="font-mono">/api/alerts/dispatch</code> and ship today via Telegram Bot API
+          (channel <code className="font-mono">@DubaiPropertydeal</code> + 1:1 DMs to Rami). WhatsApp 1:1 delivery via Meta Cloud API direct is wired but deferred —
+          see <code className="font-mono">docs/WhatsApp-Integration-Plan.md</code>. Image collage composed at <code className="font-mono">/api/og?u=…</code>.
         </p>
       </div>
     </div>

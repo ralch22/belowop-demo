@@ -140,8 +140,8 @@ export default async function AlertPreviewPage({ searchParams }: { searchParams:
               </pre>
             </div>
             <p className="mt-2 text-center text-[10px] text-slate-400">
-              Twilio template:{' '}
-              {ctx.dropPct < -0.01 ? 'TPL_BELOWOP_PRICEDROP' : 'TPL_BELOWOP_LISTING'}
+              Target template (Meta Cloud direct, deferred): <code className="font-mono">below_op_alert</code>{' '}
+              ({ctx.dropPct < -0.01 ? 'price-drop variant' : 'new-listing variant'})
             </p>
           </Phone>
 

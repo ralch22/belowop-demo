@@ -10,15 +10,17 @@
 
 Per the PM audit, the critical path to a *public* launch is shorter than the full §8 list. Everything else can land as a fast-follow.
 
+**Priority order** reflects the 2026-05-22 client direction: table consistency first, WhatsApp 1:1 deferred until that's solid.
+
 | # | Item | Status |
 |---|---|---|
-| 1 | RERA broker arrangement confirmed | 🔴 Blocked-by-external (Legal / Rami) |
-| 2 | Twilio WhatsApp Business templates approved (`TPL_BELOWOP_LISTING`, `TPL_BELOWOP_PRICEDROP`) — for 1:1 DMs to subscribers + Rami | 🔴 Blocked-by-external (Meta SLA 24–48 h) |
-| 3 | Telegram bot + broadcast channel live, env vars set on Vercel | ✅ Live — `@DubaiPropertydeal`, end-to-end automated |
-| 4 | WhatsApp Channel (`@DubaiPropertydeal`) — public broadcast surface | ✅ Channel live · alerts post manually via `/admin/relay` (no Channels API exists) |
-| 5 | Vercel Pro upgrade so crons can run `*/5` (image sync) and `*/2` (alerts) | ⏳ Pending (Rami) |
-| 6 | Apify scheduled task wired to the webhook + `APIFY_TOKEN` set | ⏳ Pending (Rami) |
-| 7 | `BROKER_WHATSAPP_DIRECT`, `LEADS_NOTIFY_WHATSAPP` set in Vercel production env | ⏳ Pending Twilio account (`LEADS_NOTIFY_TELEGRAM` ✅) |
+| 1 | **Apify scheduled task wired** to the webhook + `APIFY_TOKEN` set — pipeline is dormant without it | ⏳ Pending (Rami) — step-by-step at [`docs/APIFY-SCHEDULE-SETUP.md`](APIFY-SCHEDULE-SETUP.md) |
+| 2 | Pipeline hardening: `ingestion_runs` log + stale-listing pruning (2-miss) + `/admin/pipeline` page + watchdog cron | ⏳ Paused on item 1 above (tasks #65–#68) |
+| 3 | RERA broker arrangement confirmed | 🔴 Blocked-by-external (Legal / Rami) |
+| 4 | Telegram bot + broadcast channel live, env vars set on Vercel | ✅ Live — `@DubaiPropertydeal`, end-to-end automated |
+| 5 | WhatsApp Channel (`@DubaiPropertydeal`) — public broadcast surface | ✅ Channel live · alerts post manually via `/admin/relay` (no Channels API exists) |
+| 6 | Vercel Pro upgrade so crons can run `*/5` (image sync) and `*/2` (alerts) | ⏳ Pending (Rami) |
+| 7 | **Meta Cloud API direct** credentials: `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_TOKEN`, `META_WHATSAPP_WABA_ID`, `META_WHATSAPP_VERIFY_TOKEN` set in Vercel + `below_op_alert` template approved | ⏳ **Deferred** per client direction — Jad's WABA already approved (see [`docs/WhatsApp-Integration-Plan.md`](WhatsApp-Integration-Plan.md)). Twilio path retired. |
 | 8 | Smoke test: one real listing flows end-to-end (ingest → image sync → Telegram alert → lead capture → broker notify) | ✅ Verified live with Sarah Al-Mansouri test lead |
 
 Everything in the §8 acceptance list below either already passes or depends on one of the above.
@@ -41,12 +43,24 @@ Everything in the §8 acceptance list below either already passes or depends on 
 **Done:** `next-pwa` configured (`next.config.js`), `public/manifest.json` with 192/512/maskable icons, custom `InstallPrompt` with iOS instructional variant, offline fallback page at `/offline`, service worker registered, runtime caching for listings/Blob images/PF CDN/OG/Next image optimizer.
 **Needed:** Run Lighthouse on the live URL and attach screenshots; tune any sub-90 metric.
 
-### 8.3 — Scraper runs every 30 min, > 99% success over 7-day window
+### 8.3 — Scraper runs on a recurring schedule, > 99% success over 7-day window
 
-**Status:** ⏳ Pending
+**Status:** ⏳ Pending — **production data is frozen** (the 102 listings are from a single manual Apify run; nothing automated until item 1 above is done)
 **Owner:** Rami (Apify config)
-**Done:** Webhook (`/api/webhooks/apify`) is live, HMAC-verified, parses the azzouzana schema, upserts listings + writes `price_history` + queues `alert_events`. 102 real listings already ingested.
-**Needed:** Apify task scheduled to 30-min cadence with webhook attached; 7-day rolling success metric collected from Apify run history once cadence is live.
+**Done:** Webhook (`/api/webhooks/apify`) is live, HMAC-verified, parses the azzouzana schema, upserts listings + writes `price_history` + queues `alert_events`. 102 real listings already ingested via one manual run.
+**Needed:** Complete [`docs/APIFY-SCHEDULE-SETUP.md`](APIFY-SCHEDULE-SETUP.md) (recommended cadence: every 6h for v1, ~$73/mo); 7-day rolling success metric collected from Apify run history once cadence is live. **Spec §3.1 calls for 30-min cadence** — we'll start at 6h for cost discipline and step up as paying subscribers materialize.
+
+### 8.3a–e — Pipeline hardening (Pause queue)
+
+**Status:** ⏳ Paused on §8.3 above
+**Owner:** Eng
+**Done:** Architecture decided; tasks tracked (#65–#68).
+**Needed (in order):**
+- a) Migration `0003_ingestion_runs.sql` — log table for every Apify webhook invocation
+- b) Apify webhook logs to `ingestion_runs` (started_at, items_received/inserted/updated/withdrawn/errored, status)
+- c) Stale-listing pruning — 2 consecutive misses → `withdrawn_at = NOW()` + `alert_event` kind=`withdrawn`
+- d) `/admin/pipeline` observability page — last 30 days of runs + freshness card
+- e) `/api/cron/watchdog` — daily: no run in 26h **or** no new listings in 48h **or** last run errored → Telegram-DM Rami
 
 ### 8.4 — Image worker rehosts to Blob within 10 min of ingest
 
@@ -72,8 +86,8 @@ Everything in the §8 acceptance list below either already passes or depends on 
 
 **Status:** ⏳ Pending live test
 **Owner:** Eng (verify) / Rami (channels)
-**Done:** `LeadModal` opens on row click; `POST /api/leads` writes the row, KV-deduplicates, and calls `lib/notify.ts` which fires both Twilio + Telegram with the broker template. Notification path is stubbed and logged when env vars are missing.
-**Needed:** Live end-to-end test once Twilio templates are approved and channel env vars are set. Measure the 30-s SLA on the test capture.
+**Done:** `LeadModal` opens on row click; `POST /api/leads` writes the row, KV-deduplicates, and calls `lib/notify.ts` which fires Telegram bot DM (verified live with Sarah Al-Mansouri test lead — see SRS-FR-42). WhatsApp branch in `notify.ts` is stubbed pending Meta Cloud API wiring (deferred).
+**Needed:** Once Meta Cloud API direct is wired (`docs/WhatsApp-Integration-Plan.md`), add the WhatsApp DM path in parallel to Telegram. Measure the 30-s SLA on the test capture.
 
 ### 8.8 — New below-OP listing appears in WA + TG within 5 min
 

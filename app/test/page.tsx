@@ -29,7 +29,7 @@ export default function TestPlanPage() {
         <p className="font-semibold mt-2">What changed since the last review:</p>
         <ul>
           <li><strong>102 real PropertyFinder listings live.</strong> No more seed/mock data.</li>
-          <li><strong>Telegram is broadcasting.</strong> Channel <code>@DubaiPropertydeal</code> auto-posts every below-OP find. Bot <code>@DubaiPropertyDealsbot</code> DMs Rami on every lead.</li>
+          <li><strong>Telegram is broadcasting.</strong> Channel <code>@DubaiPropertydeal</code> auto-posts every below-OP find from the most recent Apify ingestion. Bot <code>@DubaiPropertyDealsbot</code> DMs Rami on every lead.</li>
           <li><strong>Alert template matches your <code>Variables.pdf</code> exactly.</strong></li>
           <li><strong>WhatsApp Channel relay built</strong> at <CodeLink href="/admin/relay">/admin/relay</CodeLink> — 3 clicks per post (Meta has no Channel API).</li>
           <li><strong>PWA shipped:</strong> service worker, install prompt, offline fallback, full icon set.</li>
@@ -136,7 +136,7 @@ See all units → belowop-demo.vercel.app`}
       <Section title="5 · What's real vs pending">
         <table className="text-sm">
           <tbody>
-            <Status what="Live Apify scraper (azzouzana) feeding PropertyFinder data" status="real" extra="102 listings ingested" />
+            <Status what="Apify scraper (azzouzana) ingestion path wired + HMAC-verified" status="partial" extra="102 listings ingested by one Apify run; recurring schedule pending Rami (docs/APIFY-SCHEDULE-SETUP.md)" />
             <Status what="Neon Postgres persisting listings + leads + alerts + subscribers" status="real" />
             <Status what="Image rehosting to our CDN (Vercel Blob, WebP)" status="real" extra="~300 images transcoded" />
             <Status what="OP extraction from broker description" status="real" extra="Regex parser + 5% baseline fallback" />
@@ -148,7 +148,7 @@ See all units → belowop-demo.vercel.app`}
             <Status what="Privacy + Terms pages (PDPL-aligned)" status="real" />
             <Status what="Automated tests + CI" status="real" extra="84 tests · GitHub Actions on every push" />
             <Status what="WhatsApp Channel @DubaiPropertydeal broadcast" status="partial" extra="Manual via /admin/relay — Meta has no Channel API, so we built the 3-click relay" />
-            <Status what="Twilio 1:1 WhatsApp delivery (per-buyer DMs)" status="pending" extra="Jad to follow docs/BelowOP-Twilio-Setup.pdf (~1h setup + 24–48h Meta template approval)" />
+            <Status what="WhatsApp 1:1 via Meta Cloud API direct (Jad's WABA already approved)" status="pending" extra="Deferred per client direction — table is current priority. Plan at docs/WhatsApp-Integration-Plan.md. Twilio path retired." />
             <Status what="RERA broker disclosure" status="pending" extra="Placeholder — fill in once registration is confirmed" />
           </tbody>
         </table>
@@ -164,10 +164,10 @@ See all units → belowop-demo.vercel.app`}
             <tr><th>Sprint</th><th>Ships</th></tr>
           </thead>
           <tbody>
-            <Row2 a="1 — this week" b="Twilio sandbox connected. Per-buyer WhatsApp DMs route alongside Telegram." />
-            <Row2 a="2" b="Meta WhatsApp template approval. Live 1:1 broadcast to subscribers." />
-            <Row2 a="3" b="Apify scraper schedule (every 30 min). HMAC body signing on webhook. Signed expiring unsubscribe tokens." />
-            <Row2 a="4" b="Postgres RLS. CSP + security headers. Public site SEO." />
+            <Row2 a="1 — this week" b="Apify recurring schedule wired (docs/APIFY-SCHEDULE-SETUP.md). Pipeline hardening: ingestion log, stale pruning (2-miss), /admin/pipeline page, watchdog cron." />
+            <Row2 a="2" b="HMAC body signing on Apify webhook. Signed expiring unsubscribe tokens. Postgres RLS. CSP + security headers." />
+            <Row2 a="3" b="WhatsApp 1:1 via Meta Cloud API direct — single below_op_alert template + 24h-window free-form (docs/WhatsApp-Integration-Plan.md)." />
+            <Row2 a="4" b="Public site SEO. Email channel via Resend." />
             <Row2 a="5" b="Multi-portal expansion — Bayut + Dubizzle scrapers." />
             <Row2 a="6" b="Web push notifications, broker dashboard, premium subscriptions." />
           </tbody>
@@ -186,10 +186,13 @@ See all units → belowop-demo.vercel.app`}
           Source &amp; docs are public on GitHub: <a href="https://github.com/ralch22/belowop-demo" className="font-mono text-brand hover:underline dark:text-brand-dark">github.com/ralch22/belowop-demo</a>
         </p>
         <ul>
-          <li><code>docs/BelowOP-Twilio-Setup.pdf</code> — step-by-step Twilio + Meta template walkthrough</li>
+          <li><code>docs/APIFY-SCHEDULE-SETUP.md</code> — Rami&apos;s top-priority setup task</li>
+          <li><code>docs/WhatsApp-Integration-Plan.md</code> — Meta Cloud API direct (current plan; deferred)</li>
+          <li><code>docs/GHL-vs-Twilio.md</code> — vendor comparison (superseded)</li>
           <li><code>docs/BelowOP-Scope-For-Approval.docx</code> — remaining work + priorities</li>
           <li><code>docs/RTM_COVERAGE.md</code> — 105 requirements mapped to current build state</li>
-          <li><code>docs/LAUNCH_CHECKLIST.md</code> — CLAUDE.md §8 acceptance criteria</li>
+          <li><code>docs/LAUNCH_CHECKLIST.md</code> — spec §8 acceptance criteria</li>
+          <li><code>docs/BelowOP-Twilio-Setup.pdf</code> — archived (Twilio path retired)</li>
         </ul>
       </Section>
 

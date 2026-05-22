@@ -1,12 +1,23 @@
 /**
- * Twilio WhatsApp sender — sandbox-compatible.
+ * Twilio WhatsApp sender — RETIRED 2026-05-22.
  *
- * In Twilio's sandbox, you can only message numbers that have joined the
- * sandbox by texting the join code (e.g. "join green-house") to the sandbox
- * number. For production, templates must be Meta-approved and TWILIO_WHATSAPP_FROM
- * should be your verified business number.
+ * Jad's existing WABA "Distress Deals Dubai" (+1 555-976-4984) is already
+ * Meta-verified + Marketing-enabled, which makes Meta Cloud API direct the
+ * optimal transport. This file remains so existing call sites compile and
+ * stub-success in dev (HAS_CREDS will always be false in production); the
+ * production WhatsApp path is being rebuilt as `lib/whatsapp.ts` against
+ * graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages.
  *
- * Required env vars:
+ * See:
+ *   docs/WhatsApp-Integration-Plan.md  ← current plan (Meta direct)
+ *   docs/GHL-vs-Twilio.md              ← evaluation history
+ *   docs/BelowOP-Twilio-Setup.pdf      ← archived setup guide
+ *
+ * Per client direction 2026-05-22, this work is DEFERRED behind table-pipeline
+ * hardening (tasks #65-#68). Until that lands, do not wire new code paths
+ * through this module — Telegram is the only live alert transport.
+ *
+ * Required env vars (historical):
  *   TWILIO_ACCOUNT_SID
  *   TWILIO_AUTH_TOKEN
  *   TWILIO_WHATSAPP_FROM  (e.g. whatsapp:+14155238886 for sandbox)

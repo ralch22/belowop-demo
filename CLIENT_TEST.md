@@ -110,7 +110,7 @@ Please react to each — short answers are fine:
 
 ### WhatsApp Channel workflow
 
-- Today, `/admin/relay` lets you/an assistant post each new find into the Channel in 3 clicks (copy caption · download hero · open Channel). Acceptable for now, or do you want this fully automated via Twilio 1:1 fallback?
+- Today, `/admin/relay` lets you/an assistant post each new find into the Channel in 3 clicks (copy caption · download hero · open Channel). Acceptable for now, or do you want this fully automated via **Meta Cloud API direct** (see [`docs/WhatsApp-Integration-Plan.md`](docs/WhatsApp-Integration-Plan.md))?
 
 ### Anything I haven't asked
 
@@ -124,7 +124,7 @@ Please react to each — short answers are fine:
 
 | | Status |
 |---|---|
-| Live Apify scraper (`azzouzana`) feeding real PropertyFinder data | ✅ Real — 102 listings ingested |
+| Apify scraper (`azzouzana`) ingestion path wired + HMAC-verified | 🟡 Manual — 102 listings ingested by one Apify run; recurring schedule pending Rami ([docs/APIFY-SCHEDULE-SETUP.md](docs/APIFY-SCHEDULE-SETUP.md)) |
 | Neon Postgres persisting listings + leads + alerts + subscribers | ✅ Real |
 | Image rehosting to our own CDN (Vercel Blob, WebP) | ✅ Real — ~300 images transcoded |
 | OP value extraction from broker description | ✅ Real — regex parser + 5% baseline fallback |
@@ -136,25 +136,27 @@ Please react to each — short answers are fine:
 | Privacy + Terms pages (PDPL-aligned) | ✅ Real |
 | Automated tests + CI | ✅ Real — 84 tests, GitHub Actions on every push |
 | WhatsApp Channel `@DubaiPropertydeal` broadcast | 🟡 Manual via `/admin/relay` — Meta has no Channel API, so we built the 3-click relay |
-| Twilio 1:1 WhatsApp delivery (per-buyer DMs) | ⏳ Pending — Jad to follow `docs/BelowOP-Twilio-Setup.pdf`; ~1 hour of setup + 24-48h Meta template approval |
+| WhatsApp 1:1 delivery via Meta Cloud API direct (Jad's WABA already approved) | ⏳ Deferred per client direction — table is current priority; see [docs/WhatsApp-Integration-Plan.md](docs/WhatsApp-Integration-Plan.md). Twilio path retired (`docs/BelowOP-Twilio-Setup.pdf` archived). |
 | RERA broker disclosure | ⏳ Placeholder — fill in once registration is confirmed |
 
-So: **buyers see 102 live PropertyFinder below-OP units, the Telegram channel is broadcasting, Rami gets pinged on every lead in real time, and the WhatsApp Channel is fed in 3 clicks from `/admin/relay`.** The only outbound piece still external is Twilio 1:1 — and that's a Jad-side setup task, not engineering.
+So: **buyers see 102 live PropertyFinder below-OP units, the Telegram channel is broadcasting, Rami gets pinged on every lead in real time via Telegram bot, and the WhatsApp Channel is fed in 3 clicks from `/admin/relay`.** The remaining work is twofold: (1) Rami wiring the Apify schedule so the table refreshes automatically (top priority — see [docs/APIFY-SCHEDULE-SETUP.md](docs/APIFY-SCHEDULE-SETUP.md)), and (2) Meta Cloud API direct integration for automated 1:1 WhatsApp DMs (deferred — Jad's WABA is ready when we resume).
 
 ---
 
 ## 6 · Staged roadmap once you sign off
 
+Priority reflects the 2026-05-22 direction: **table first; alerts can be manual for now.**
+
 | Sprint | What ships |
 |---|---|
-| 1 — this week | Twilio sandbox connected. Per-buyer WhatsApp DMs route alongside Telegram. |
-| 2 | Meta WhatsApp template approval. Live 1:1 broadcast to subscribers. |
-| 3 | Apify scraper schedule (every 30 min, full coverage of both PropertyFinder search URLs). HMAC body signing on webhook. Signed expiring unsubscribe tokens. |
-| 4 | Postgres RLS policies. CSP + security headers. Public site SEO. |
+| 1 — this week | Apify recurring schedule wired ([docs/APIFY-SCHEDULE-SETUP.md](docs/APIFY-SCHEDULE-SETUP.md)). Pipeline hardening: `ingestion_runs` log table, stale-listing pruning (2-miss conservative), `/admin/pipeline` observability page, watchdog cron with Telegram alert. |
+| 2 | HMAC body signing on Apify webhook. Signed expiring unsubscribe tokens. Postgres RLS policies. CSP + security headers. |
+| 3 | WhatsApp 1:1 via Meta Cloud API direct ([docs/WhatsApp-Integration-Plan.md](docs/WhatsApp-Integration-Plan.md)) — single `below_op_alert` template + 24h-window free-form. |
+| 4 | Public site SEO. Email channel via Resend. |
 | 5 | Multi-portal expansion — Bayut + Dubizzle scrapers. |
 | 6 | Web push notifications. Premium tier subscriptions. Broker dashboard for managing inventory. |
 
-The full engineering scope for client approval is in `docs/BelowOP-Scope-For-Approval.docx` with priority tiers (High / Medium / Low) and effort estimates.
+The full engineering scope for client approval is in [`docs/BelowOP-Scope-For-Approval.docx`](docs/BelowOP-Scope-For-Approval.docx) with priority tiers (High / Medium / Low) and effort estimates.
 
 ---
 
@@ -166,10 +168,13 @@ You can also browse the source on GitHub (https://github.com/ralch22/belowop-dem
 
 For technical setup tasks on your side, the relevant guides live in `docs/`:
 
-- `docs/BelowOP-Twilio-Setup.pdf` — step-by-step Twilio + Meta template approval walkthrough
-- `docs/BelowOP-Scope-For-Approval.docx` — remaining engineering work + priorities
-- `docs/RTM_COVERAGE.md` — 105 requirements mapped to current build state
-- `docs/LAUNCH_CHECKLIST.md` — CLAUDE.md §8 acceptance criteria
+- [`docs/APIFY-SCHEDULE-SETUP.md`](docs/APIFY-SCHEDULE-SETUP.md) — **Rami's top priority** — step-by-step Apify schedule + webhook wiring
+- [`docs/WhatsApp-Integration-Plan.md`](docs/WhatsApp-Integration-Plan.md) — Meta Cloud API direct integration plan (current path; deferred)
+- [`docs/GHL-vs-Twilio.md`](docs/GHL-vs-Twilio.md) — vendor comparison (superseded by Meta direct plan)
+- [`docs/BelowOP-Scope-For-Approval.docx`](docs/BelowOP-Scope-For-Approval.docx) — remaining engineering work + priorities
+- [`docs/RTM_COVERAGE.md`](docs/RTM_COVERAGE.md) — 105 requirements mapped to current build state
+- [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) — spec §8 acceptance criteria
+- `docs/BelowOP-Twilio-Setup.pdf` — **archived** (Twilio path retired; kept for record)
 
 ---
 

@@ -6,13 +6,26 @@ export default function AboutPage() {
       <Section title="What this site does">
         <p>
           Below OP is a curated, filterable feed of Dubai property inventory listed below
-          Original Price (OP). New listings and further price drops are pushed in real time
-          to WhatsApp and Telegram subscribers. Tap a unit to inquire — we&apos;ll WhatsApp you back.
+          Original Price (OP). New finds are broadcast to our public Telegram channel
+          <a className="underline" href="https://t.me/dubaipropertydeal" target="_blank" rel="noopener noreferrer"> @DubaiPropertydeal</a>;
+          a WhatsApp Business 1:1 channel is in the queue. Tap a unit to inquire and our broker will follow up.
         </p>
       </Section>
 
       <Section title="Data freshness">
-        <p>Listings refreshed every 30 minutes. Live unit count and last-refresh timestamp are shown on the listings page.</p>
+        <p>
+          Listings are ingested from leading Dubai listing portals via a scheduled scraper. Live unit count and
+          last-update timestamp are shown on the listings page. Today the table reflects the most recent
+          ingestion run.
+        </p>
+      </Section>
+
+      <Section title="Public broadcast">
+        <p>
+          The fastest way to see every new below-OP find:
+          {' '}<a className="underline font-medium" href="https://t.me/dubaipropertydeal" target="_blank" rel="noopener noreferrer">Telegram → @DubaiPropertydeal</a>.
+          The same finds also post to our WhatsApp Channel manually shortly after.
+        </p>
       </Section>
 
       <Section title="Broker disclosure">

@@ -7,7 +7,7 @@ export default function TermsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Terms of Use</h1>
-      <p className="mt-2 text-xs text-slate-500">Last updated: 2026-05-21</p>
+      <p className="mt-2 text-xs text-slate-500">Last updated: 2026-05-22</p>
 
       <Section title="1. About this site">
         <p>
@@ -28,10 +28,11 @@ export default function TermsPage() {
 
       <Section title="3. No warranty of accuracy">
         <p>
-          We aggregate listing data from multiple sources and refresh it every 30 minutes. Despite our best
-          efforts, some fields may be stale, mis-categorised, or incomplete. Before signing anything you must
-          independently verify all material facts — title, RERA registration of the unit, service charges,
-          tenancy status, escrow status, encumbrances, and current price.
+          We aggregate listing data from leading Dubai listing portals via a scheduled scraper and refresh it on
+          a recurring cadence. Despite our best efforts, some fields may be stale, mis-categorised, or
+          incomplete. Before signing anything you must independently verify all material facts — title, RERA
+          registration of the unit, service charges, tenancy status, escrow status, encumbrances, and current
+          price.
         </p>
         <p>
           We provide the site &ldquo;as is&rdquo; and disclaim all implied warranties (merchantability, fitness
@@ -61,9 +62,9 @@ export default function TermsPage() {
 
       <Section title="6. Inquiries and follow-up">
         <p>
-          When you submit an inquiry, a licensed broker will WhatsApp you back, typically within one hour during
-          UAE business hours. Submitting an inquiry does not commit you to anything and you can ask the broker
-          to stop contacting you at any time.
+          When you submit an inquiry, the on-call broker is notified immediately and will follow up by WhatsApp,
+          phone, or email — typically within one hour during UAE business hours. Submitting an inquiry does not
+          commit you to anything and you can ask the broker to stop contacting you at any time.
         </p>
         <p>
           We rate-limit inquiry submissions to a small number per phone number per day to discourage abuse.

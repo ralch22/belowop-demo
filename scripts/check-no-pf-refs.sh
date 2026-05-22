@@ -51,11 +51,15 @@ JOINED="${JOINED:1}"
 # Exclusions:
 #   --exclude-dir=admin    — admin pages are admin-gated, not public surface
 #   --exclude-dir=apify    — webhooks/apify/* uses internal azzouzana schema
+#   --exclude-dir=test     — /test is a client-only status page (not marketing)
+#   --exclude-dir=og       — app/api/og has a server-side comment about CDN UA filtering
 #   --exclude-dir=node_modules
 #   --exclude-dir=.next
 EXCLUDES=(
   --exclude-dir=admin
   --exclude-dir=apify
+  --exclude-dir=test
+  --exclude-dir=og
   --exclude-dir=node_modules
   --exclude-dir=.next
 )

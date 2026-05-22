@@ -7,7 +7,7 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Privacy Policy</h1>
-      <p className="mt-2 text-xs text-slate-500">Last updated: 2026-05-21</p>
+      <p className="mt-2 text-xs text-slate-500">Last updated: 2026-05-22</p>
 
       <Section title="Who we are">
         <p>
@@ -69,15 +69,19 @@ export default function PrivacyPage() {
 
       <Section title="Who sees it">
         <p>
-          Your inquiry is delivered to the on-call broker via WhatsApp and Telegram, both end-to-end encrypted
-          channels. The underlying record is stored in our database (Vercel Postgres, hosted in the EU region).
-          The following sub-processors handle data on our behalf, under written contract:
+          Your inquiry is delivered to the on-call broker via Telegram (end-to-end encrypted). The underlying
+          record is stored in our database (Neon Postgres, hosted in the EU region). The following sub-processors
+          handle data on our behalf, under written contract:
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Vercel — hosting and database.</li>
-          <li>Twilio — WhatsApp message delivery to the broker.</li>
-          <li>Telegram — secondary delivery channel to the broker.</li>
+          <li>Vercel — hosting and serverless functions.</li>
+          <li>Neon — managed Postgres database (EU region).</li>
+          <li>Telegram — broker notification delivery channel.</li>
         </ul>
+        <p className="text-xs text-slate-500">
+          A WhatsApp Business notification channel (via Meta Cloud API direct) is planned. This policy will be
+          updated to name Meta as an additional sub-processor before that channel is activated.
+        </p>
       </Section>
 
       <Section title="Cookies">
@@ -105,8 +109,8 @@ export default function PrivacyPage() {
           <li>Object to or restrict further processing.</li>
         </ul>
         <p>
-          To exercise any of these rights, email <span className="font-mono">privacy@belowop.ae</span> from the
-          phone or address associated with the inquiry. We respond within 30 calendar days. There is no fee.
+          To exercise any of these rights, email <span className="font-mono">privacy@emergedigital.com</span> from
+          the phone or address associated with the inquiry. We respond within 30 calendar days. There is no fee.
         </p>
       </Section>
 
@@ -121,8 +125,8 @@ export default function PrivacyPage() {
       <Section title="Children">
         <p>
           Below OP is not directed at children. We do not knowingly collect data from anyone under 18. If you
-          believe a child has submitted an inquiry, email <span className="font-mono">privacy@belowop.ae</span> and
-          we will delete the record.
+          believe a child has submitted an inquiry, email <span className="font-mono">privacy@emergedigital.com</span>
+          and we will delete the record.
         </p>
       </Section>
 
@@ -135,9 +139,8 @@ export default function PrivacyPage() {
 
       <Section title="Contact">
         <p>
-          Data protection enquiries: <span className="font-mono">privacy@belowop.ae</span> (placeholder — to be
-          confirmed at launch).<br />
-          General enquiries: <span className="font-mono">hello@belowop.ae</span>.
+          Data protection enquiries: <span className="font-mono">privacy@emergedigital.com</span>.<br />
+          General enquiries: <span className="font-mono">rami@emergedigital.com</span>.
         </p>
       </Section>
     </div>

@@ -93,10 +93,10 @@ export default function AlertsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-center">
-        Get Below-OP alerts the moment they list.
+        Get Below-OP alerts in your inbox.
       </h1>
       <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
-        Free. Unsubscribe anytime. Max 5 alerts/day.
+        Free. Unsubscribe anytime. Max 5 alerts/day. Telegram channel is live; WhatsApp 1:1 coming soon.
       </p>
 
       {channels.length > 0 && (
@@ -105,7 +105,7 @@ export default function AlertsPage() {
             Quickest: follow our public channels
           </h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-            Every below-OP unit we ingest gets posted here. No sign-up, no form.
+            Telegram auto-posts every new find. WhatsApp Channel is updated by hand shortly after. No sign-up, no form.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {channels.map((c) => (

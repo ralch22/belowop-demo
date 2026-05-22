@@ -8,7 +8,7 @@ export default function Footer() {
           <div>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Below OP</p>
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 max-w-xs">
-              Curated below-OP & off-market Dubai inventory. Listings refreshed daily.
+              Curated below-OP & off-market Dubai inventory. Follow on Telegram <a href="https://t.me/dubaipropertydeal" className="underline hover:text-brand">@DubaiPropertydeal</a>.
             </p>
           </div>
           <div>
@@ -27,7 +27,7 @@ export default function Footer() {
               Brokerage: <span className="font-mono text-slate-500">{'<TBD>'}</span>
             </p>
             <p className="mt-3 text-xs text-slate-500">
-              <Link href="/privacy" className="hover:text-brand">Privacy</Link> · <Link href="/terms" className="hover:text-brand">Terms</Link> · <a href="mailto:hello@belowop.ae" className="hover:text-brand">Contact</a>
+              <Link href="/privacy" className="hover:text-brand">Privacy</Link> · <Link href="/terms" className="hover:text-brand">Terms</Link> · <a href="mailto:rami@emergedigital.com" className="hover:text-brand">Contact</a> · <a href="https://github.com/ralch22/belowop-demo" className="hover:text-brand" target="_blank" rel="noopener noreferrer">Source</a>
             </p>
           </div>
         </div>

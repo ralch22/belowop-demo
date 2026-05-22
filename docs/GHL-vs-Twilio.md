@@ -1,5 +1,7 @@
 # GHL vs Twilio — WhatsApp Integration Decision Doc
 
+> ⚠️ **SUPERSEDED 2026-05-22** — see [`WhatsApp-Integration-Plan.md`](WhatsApp-Integration-Plan.md). After Jad shared his Meta Business Manager screenshots confirming the WABA "Distress Deals Dubai" (phone +1 555-976-4984) is already approved + Green quality, the optimal path became **Meta Cloud API direct** — no BSP markup, no extra abstraction layer. This doc is retained as the record of how we evaluated the alternatives.
+
 **For:** Rami / Jad
 **Updated:** 2026-05-22
 **Context:** Below OP needs to send (1) below-OP listing alerts to opted-in subscribers and (2) lead notifications to Rami's phone, both via WhatsApp. Telegram is already live. This doc compares the two paths we'd take for WhatsApp.
