@@ -12,31 +12,41 @@ export default function TestPlanPage() {
         <p className="text-xs uppercase tracking-widest text-brand font-semibold">Client test plan</p>
         <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight">Below OP — try it</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          For Jad ALCHEIKH · From Rami · <span className="font-mono">2026-05-21</span>
+          For Jad ALCHEIKH · From Rami · <span className="font-mono">2026-05-22</span>
         </p>
       </header>
 
       <Section title="1 · What you're looking at">
         <p>
-          A working Progressive Web App that surfaces below-OP Dubai inventory as a filterable table and pushes
-          alerts to WhatsApp + Telegram when new units or price drops appear. Everything you see is the production
-          codebase running on real infrastructure (Vercel + Neon Postgres + Vercel Blob + Apify scraper).
+          A working Progressive Web App that surfaces below-OP Dubai inventory as a filterable table and auto-broadcasts
+          new finds to a Telegram channel — with a one-click relay flow into the WhatsApp Channel and a direct DM to Rami
+          the second a buyer submits an inquiry.
         </p>
+        <p>
+          Everything is production: Vercel (Next.js 14 + cron) · Neon Postgres · Vercel Blob · Vercel KV · Apify
+          (<code>azzouzana/propertyfinder-ads-search-results-pages-scraper</code>) · Telegram Bot API.
+        </p>
+        <p className="font-semibold mt-2">What changed since the last review:</p>
         <ul>
-          <li>Already live with <strong>5 real listings</strong> ingested via the production scraper, plus <strong>30 seeded demo listings</strong>.</li>
-          <li>The <strong>alert template matches your existing broker post format exactly</strong> (per <span className="font-mono text-xs">Variables.pdf</span>).</li>
-          <li>Round 1 feedback (columns, no unit numbers, sqm units) is all live.</li>
+          <li><strong>102 real PropertyFinder listings live.</strong> No more seed/mock data.</li>
+          <li><strong>Telegram is broadcasting.</strong> Channel <code>@DubaiPropertydeal</code> auto-posts every below-OP find. Bot <code>@DubaiPropertyDealsbot</code> DMs Rami on every lead.</li>
+          <li><strong>Alert template matches your <code>Variables.pdf</code> exactly.</strong></li>
+          <li><strong>WhatsApp Channel relay built</strong> at <CodeLink href="/admin/relay">/admin/relay</CodeLink> — 3 clicks per post (Meta has no Channel API).</li>
+          <li><strong>PWA shipped:</strong> service worker, install prompt, offline fallback, full icon set.</li>
+          <li><strong>Privacy + Terms pages live</strong>, PDPL-aligned.</li>
+          <li><strong>84 automated tests + CI guardrail.</strong></li>
         </ul>
       </Section>
 
       <Section title="2 · 5-minute mobile test">
         <p>Open <CodeLink href="/">belowop-demo.vercel.app</CodeLink> on your phone.</p>
         <ol>
-          <li><strong>Install as an app</strong> → Share → &quot;Add to Home Screen&quot;. Launches standalone.</li>
-          <li><strong>Scroll the listings</strong> — cards on mobile, table on desktop. ~35 units.</li>
+          <li><strong>Install as an app</strong> — Share → &quot;Add to Home Screen&quot; (or tap the install banner).</li>
+          <li><strong>Scroll the listings</strong> — 102 real PropertyFinder units. Cards on mobile, table on desktop.</li>
           <li><strong>Tap a row</strong> → in-place modal opens. URL updates to <code>?inquire=u-xxxxxx</code> (shareable).</li>
-          <li><strong>Submit a test inquiry</strong> — writes to the live DB.</li>
-          <li><strong>Open <CodeLink href="/alerts">/alerts</CodeLink></strong> — public alert subscribe form.</li>
+          <li><strong>Submit a test inquiry</strong> — within ~1s Rami&apos;s Telegram bot receives the lead.</li>
+          <li><strong>Open <CodeLink href="/alerts">/alerts</CodeLink></strong> — channel selection, area chips, double opt-in.</li>
+          <li><strong>Tap the Telegram channel button</strong> → opens <code>t.me/dubaipropertydeal</code> — auto-broadcast feed.</li>
         </ol>
       </Section>
 
@@ -46,13 +56,20 @@ export default function TestPlanPage() {
             <tr><th>#</th><th>What</th><th>Where</th><th>Check</th></tr>
           </thead>
           <tbody>
-            <Row n="1" what="Browse listings" where={<CodeLink href="/">/</CodeLink>} check="Layout, columns, sort, filter combinations" />
-            <Row n="2" what="Inspect a unit" where="Click any row" check="Fields shown, CTA wording, modal closes via Esc or backdrop" />
+            <Row n="1" what="Browse listings" where={<CodeLink href="/">/</CodeLink>} check="Layout, 25/page, sort, filter combinations" />
+            <Row n="2" what="Inspect a unit" where="Click any row" check="Fields shown, CTA wording, Esc / backdrop closes modal" />
             <Row n="3" what="Try filters" where="Top of /" check="URL updates per change — links are shareable" />
             <Row n="4" what="Alerts opt-in" where={<CodeLink href="/alerts">/alerts</CodeLink>} check="Channel selection, area chips, double opt-in flow" />
-            <Row n="5" what="Alert message preview" where={<CodeLink href="/alert-preview">/alert-preview</CodeLink>} check="Exact WhatsApp + Telegram payload that fires" />
-            <Row n="6" what="About page" where={<CodeLink href="/about">/about</CodeLink>} check="RERA disclosure placeholder, contact lines" />
-            <Row n="7" what="404 page" where={<code>/anything-bad</code>} check="Bounce-back CTAs" />
+            <Row n="5" what="Alert preview" where={<CodeLink href="/alert-preview">/alert-preview</CodeLink>} check="Exact Telegram + WhatsApp payload" />
+            <Row n="6" what="Live Telegram feed" where={<code>t.me/dubaipropertydeal</code>} check="Auto-posted hero + canonical caption per below-OP find" />
+            <Row n="7" what="About page" where={<CodeLink href="/about">/about</CodeLink>} check="RERA disclosure placeholder, contact lines" />
+            <Row n="8" what="Privacy + Terms" where={<><CodeLink href="/privacy">/privacy</CodeLink>, <CodeLink href="/terms">/terms</CodeLink></>} check="PDPL-aligned wording" />
+            <Row n="9" what="Offline fallback" where="DevTools → Offline → reload" check="Cached shell + offline page renders" />
+            <Row n="10" what="404 page" where={<code>/anything-bad</code>} check="Bounce-back CTAs" />
+            <Row n="11" what="Admin dashboard" where={<CodeLink href="/admin">/admin</CodeLink>} check="Counts: listings / leads / subs / dispatch queue" />
+            <Row n="12" what="Alert preview tool" where={<CodeLink href="/admin/preview">/admin/preview</CodeLink>} check="Pick any listing → see exact send payload" />
+            <Row n="13" what="Manual ingest tester" where={<CodeLink href="/admin/ingest">/admin/ingest</CodeLink>} check="Paste Apify payload → see parser output" />
+            <Row n="14" what="WhatsApp Channel relay" where={<CodeLink href="/admin/relay">/admin/relay</CodeLink>} check="Pending dispatches → Copy / Download / Open Channel" />
           </tbody>
         </table>
 
@@ -93,12 +110,18 @@ See all units → belowop-demo.vercel.app`}
           <ul>
             <li>Matches your <code>Variables.pdf</code> template. Anything else broker-standard to add — Plot size, BUA, View, Sub-location?</li>
             <li>Direct WA CTA + web link both shown. Keep both, drop one?</li>
+            <li>Telegram + WhatsApp Channel get the same caption today — should they differ?</li>
           </ul>
         </Sub>
         <Sub title="Lead capture modal">
           <ul>
             <li>Fields: Name, WhatsApp, message, consent. Want to add budget? Timeline?</li>
             <li>&quot;Request details&quot; + &quot;We&apos;ll WhatsApp you back within the hour.&quot; — tone OK?</li>
+          </ul>
+        </Sub>
+        <Sub title="WhatsApp Channel workflow">
+          <ul>
+            <li>Today <CodeLink href="/admin/relay">/admin/relay</CodeLink> posts each find in 3 clicks (copy · download · open). Acceptable, or do you want Twilio 1:1 fallback fully automated?</li>
           </ul>
         </Sub>
         <Sub title="Anything I haven&apos;t asked">
@@ -110,21 +133,28 @@ See all units → belowop-demo.vercel.app`}
         </Sub>
       </Section>
 
-      <Section title="5 · What's real vs demo">
+      <Section title="5 · What's real vs pending">
         <table className="text-sm">
           <tbody>
-            <Status what="Live Apify scraper feeding real listing data" status="real" />
-            <Status what="Vercel Postgres persisting listings + leads + alerts" status="real" />
-            <Status what="Image rehosting to our CDN (Vercel Blob, WebP)" status="real" extra="20 images already transcoded" />
-            <Status what="WhatsApp lead notifications via Twilio" status="pending" extra="Code wired. Twilio account + Meta template approval (24–48h) pending." />
-            <Status what="Telegram broadcast channel" status="pending" extra="Code wired. Bot + channel need creation (5 min via @BotFather)." />
-            <Status what="Public alert subscriptions" status="pending" extra="Form + DB + double opt-in fully wired. Same dependency as above." />
-            <Status what="RERA broker disclosure" status="pending" extra="Placeholder — fill in once registration is confirmed." />
+            <Status what="Live Apify scraper (azzouzana) feeding PropertyFinder data" status="real" extra="102 listings ingested" />
+            <Status what="Neon Postgres persisting listings + leads + alerts + subscribers" status="real" />
+            <Status what="Image rehosting to our CDN (Vercel Blob, WebP)" status="real" extra="~300 images transcoded" />
+            <Status what="OP extraction from broker description" status="real" extra="Regex parser + 5% baseline fallback" />
+            <Status what="Telegram channel @DubaiPropertydeal auto-broadcast" status="real" extra="Cron-driven, hero + canonical caption" />
+            <Status what="Telegram bot @DubaiPropertyDealsbot DMs Rami on every lead" status="real" extra="Verified end-to-end" />
+            <Status what="Public alert subscriptions + double opt-in" status="real" extra="Telegram delivery live" />
+            <Status what="PWA service worker, install prompt, offline page" status="real" />
+            <Status what="Admin tools: /admin, /admin/preview, /admin/ingest, /admin/relay" status="real" />
+            <Status what="Privacy + Terms pages (PDPL-aligned)" status="real" />
+            <Status what="Automated tests + CI" status="real" extra="84 tests · GitHub Actions on every push" />
+            <Status what="WhatsApp Channel @DubaiPropertydeal broadcast" status="partial" extra="Manual via /admin/relay — Meta has no Channel API, so we built the 3-click relay" />
+            <Status what="Twilio 1:1 WhatsApp delivery (per-buyer DMs)" status="pending" extra="Jad to follow docs/BelowOP-Twilio-Setup.pdf (~1h setup + 24–48h Meta template approval)" />
+            <Status what="RERA broker disclosure" status="pending" extra="Placeholder — fill in once registration is confirmed" />
           </tbody>
         </table>
         <p>
-          So: <strong>buyers can already see live below-OP units and submit inquiries</strong> that hit our database.
-          The only piece in flight is the outbound delivery — Twilio/Telegram credentials, not engineering work.
+          So: <strong>102 live listings, Telegram channel broadcasting, Rami pinged on every lead, WhatsApp Channel fed in 3 clicks.</strong>
+          {' '}The only outbound piece still external is Twilio 1:1 — a Jad-side setup task, not engineering.
         </p>
       </Section>
 
@@ -134,22 +164,33 @@ See all units → belowop-demo.vercel.app`}
             <tr><th>Sprint</th><th>Ships</th></tr>
           </thead>
           <tbody>
-            <Row2 a="1 — this week" b="Twilio sandbox + Telegram bot connected. Lead alerts route to Rami's phone in real time." />
-            <Row2 a="2" b="Meta WhatsApp template approval. Live broadcast to subscribers." />
-            <Row2 a="3" b="Apify scraper schedule (every 30 min, full portal coverage)." />
-            <Row2 a="4" b="Public site SEO + marketing launch." />
+            <Row2 a="1 — this week" b="Twilio sandbox connected. Per-buyer WhatsApp DMs route alongside Telegram." />
+            <Row2 a="2" b="Meta WhatsApp template approval. Live 1:1 broadcast to subscribers." />
+            <Row2 a="3" b="Apify scraper schedule (every 30 min). HMAC body signing on webhook. Signed expiring unsubscribe tokens." />
+            <Row2 a="4" b="Postgres RLS. CSP + security headers. Public site SEO." />
             <Row2 a="5" b="Multi-portal expansion — Bayut + Dubizzle scrapers." />
             <Row2 a="6" b="Web push notifications, broker dashboard, premium subscriptions." />
           </tbody>
         </table>
+        <p className="mt-3 text-sm">
+          Full engineering scope with priorities (High / Medium / Low) and effort estimates is in
+          {' '}<code>docs/BelowOP-Scope-For-Approval.docx</code>.
+        </p>
       </Section>
 
       <Section title="7 · How to give feedback">
         <p>
           Easiest: WhatsApp Rami with comments while you test — screenshots welcome.
-          You can also reply to this doc, or open <CodeLink href="/admin/preview">/admin/preview</CodeLink> to view any specific
-          listing&apos;s alert and screenshot from there.
         </p>
+        <p>
+          Source &amp; docs are public on GitHub: <a href="https://github.com/ralch22/belowop-demo" className="font-mono text-brand hover:underline dark:text-brand-dark">github.com/ralch22/belowop-demo</a>
+        </p>
+        <ul>
+          <li><code>docs/BelowOP-Twilio-Setup.pdf</code> — step-by-step Twilio + Meta template walkthrough</li>
+          <li><code>docs/BelowOP-Scope-For-Approval.docx</code> — remaining work + priorities</li>
+          <li><code>docs/RTM_COVERAGE.md</code> — 105 requirements mapped to current build state</li>
+          <li><code>docs/LAUNCH_CHECKLIST.md</code> — CLAUDE.md §8 acceptance criteria</li>
+        </ul>
       </Section>
 
       <p className="mt-12 text-xs text-slate-500 italic">
@@ -205,16 +246,18 @@ function Row2({ a, b }: { a: string; b: string }) {
   );
 }
 
-function Status({ what, status, extra }: { what: string; status: 'real' | 'pending'; extra?: string }) {
+function Status({ what, status, extra }: { what: string; status: 'real' | 'partial' | 'pending'; extra?: string }) {
+  const badge =
+    status === 'real' ? (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">✓ Real</span>
+    ) : status === 'partial' ? (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">◐ Manual</span>
+    ) : (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">⏳ Pending</span>
+    );
   return (
     <tr className="border-t border-slate-200 dark:border-slate-800">
-      <td className="py-2 align-top">
-        {status === 'real' ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">✓ Real</span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">⏳ Pending</span>
-        )}
-      </td>
+      <td className="py-2 align-top">{badge}</td>
       <td className="py-2 align-top">
         <div>{what}</div>
         {extra && <div className="text-xs text-slate-500 mt-0.5">{extra}</div>}
