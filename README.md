@@ -40,7 +40,7 @@ We consume Apify's maintained marketplace actor (~$1 per 1,000 listings) rather 
 - **PWA service worker** — `next-pwa` config with stale-while-revalidate for listings/OG, cache-first for Blob, offline fallback page; custom install prompt with iOS instructional variant.
 - **Privacy + Terms pages** (`/privacy`, `/terms`) — UAE PDPL alignment, lead-deletion contact path.
 - **CI guardrail** (`.github/workflows/ci.yml`) — runs `tsc --noEmit`, `npm test`, `npm run test:hmac`, and `scripts/check-no-pf-refs.sh` on every push to main and every PR.
-- **Automated tests** — 36 description-parser cases (`tests/description-parser.test.ts`) + 12 HMAC verification cases (`tests/hmac.test.ts`) + Telegram MarkdownV2 escape cases (`tests/format-telegram.test.ts`), zero-dep micro-framework.
+- **Automated tests** — 36 description-parser (`tests/description-parser.test.ts`) + 12 HMAC verification (`tests/hmac.test.ts`) + 22 Telegram MarkdownV2 / format helpers (`tests/format-telegram.test.ts`) + 40 listings table (`tests/listings.test.ts` — applyFilters, sort, URL round-trip, pagination math). Zero-dep micro-framework.
 
 ## What still needs setup
 

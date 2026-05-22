@@ -10,10 +10,12 @@
 | Bucket | Count | % of total |
 |---|---:|---:|
 | Total requirements in RTM | **105** | 100% |
-| ✅ Covered by automated test in this repo | **15** | 14% |
-| 🟡 Covered by manual verification (artefact present, no test in this repo) | **24** | 23% |
+| ✅ Covered by automated test in this repo | **19** | 18% |
+| 🟡 Covered by manual verification (artefact present, no test in this repo) | **22** | 21% |
 | ⏳ Blocked by external dependency (Apify schedule wiring [top priority], Meta `below_op_alert` template approval [deferred], Vercel/Supabase telemetry, SSL Labs, Lighthouse CI) | **34** | 32% |
-| 🔴 Uncovered — implementation not yet present or no verification path | **32** | 31% |
+| 🔴 Uncovered — implementation not yet present or no verification path | **30** | 29% |
+
+**2026-05-22 update:** +4 covered (Table section — SRS-FR-21/22/23/24) via `tests/listings.test.ts`. +1 implemented (SRS-FR-26 View Transitions) via progressive-enhancement CSS.
 
 The RTM is authored against the **production architecture** (Supabase, Apify, R2, Twilio, Resend). The demo codebase is a Vercel/Neon/Blob slice that implements ~40% of that architecture. So "uncovered" here usually means "deferred until prod infra lands," not "forgotten."
 
@@ -42,15 +44,17 @@ Status legend: ✅ automated · 🟡 manual · 🔴 uncovered · ⏳ blocked-by-
 ### Table (9 reqs)
 | Req ID | Description | Source | Implementation | Test / verification | Status |
 |---|---|---|---|---|---|
-| SRS-FR-20 | SSR paginated table at / | SRS §3.2, Screens.md S-01 | `app/page.tsx:1-29`, `components/ListingsView.tsx` | manual: `/` renders 12/page table | 🟡 |
-| SRS-FR-21 | Filters: type, beds, area, drop% | SRS §3.2 | `components/FilterBar.tsx`, `lib/listings.ts` (`applyFilters`) | manual: exercise filters in browser | 🟡 |
-| SRS-FR-22 | Sort newest/price/drop | SRS §3.2 | `components/ListingsView.tsx` | manual | 🟡 |
-| SRS-FR-23 | Filter+sort in URL params | SRS §3.2 | `components/ListingsView.tsx:23-32` (`filtersFromParams`) | manual: deep-link to `/?type=ready&drop=5` | 🟡 |
-| SRS-FR-24 | 25/page server pagination | SRS §3.2 | `components/Pagination.tsx`; `PAGE_SIZE = 12` in `components/ListingsView.tsx:21` | **Spec drift: spec says 25, code says 12** — needs Gap §3.4 | 🔴 |
-| SRS-FR-25 | Row + colour-coded Δ | SRS §3.2, UI.md §3.4 | `components/ListingTable.tsx`, `lib/format.ts:9-13` (`dropColor`) | manual visual | 🟡 |
-| SRS-FR-26 | View Transition | SRS §3.2 | not implemented | manual on supporting browser | 🔴 |
-| SRS-FR-27 | Row is `<a>` anchor | UI.md §3.4 | `components/ListingTable.tsx` (uses Link) | manual a11y (axe) | 🟡 |
-| SRS-FR-28 | Card list <1024px | Screens.md S-01 mobile | `components/ListingCard.tsx` | manual responsive | 🟡 |
+| SRS-FR-20 | SSR paginated table at / | SRS §3.2, Screens.md S-01 | `app/page.tsx:1-29`, `components/ListingsView.tsx` | manual: `/` renders 25/page table | 🟡 |
+| SRS-FR-21 | Filters: type, beds, area, drop% | SRS §3.2 | `components/FilterBar.tsx`, `lib/listings.ts` (`applyFilters`) | `tests/listings.test.ts` — 17 cases covering type, beds (incl studio + 4+), area, developer, maxPrice (incl boundary), minDropPct (incl signed-input invariant), multi-filter composition, empty-result, no-mutation invariant | ✅ *(added 2026-05-22)* |
+| SRS-FR-22 | Sort newest/price/drop | SRS §3.2 | `lib/listings.ts` (`applyFilters` sort switch) | `tests/listings.test.ts` — 6 cases: newest, price_asc/desc, drop_desc, ppsqm_asc, filter+sort composition | ✅ *(added 2026-05-22)* |
+| SRS-FR-23 | Filter+sort in URL params | SRS §3.2 | `lib/listings.ts` (`filtersFromParams`, `paramsFromFilters` — extracted from component for testability) | `tests/listings.test.ts` — 9 cases: empty params, full params, unknown-keys-ignored, NaN-collapse, default-stripping per key (incl `sort=newest` default fix), partial-update preserves untouched keys, round-trip identity | ✅ *(added 2026-05-22)* |
+| SRS-FR-24 | 25/page server pagination | SRS §3.2 | `components/Pagination.tsx`; **`PAGE_SIZE = 25` in `components/ListingsView.tsx:21`** ✓ matches spec | `tests/listings.test.ts` — 6 cases: empty list (no NaN), exact-page boundary, 26-item overflow, 102-item production case, page-1 slice, last-page remainder | ✅ *(spec drift resolved; added 2026-05-22)* |
+| SRS-FR-25 | Row + colour-coded Δ | SRS §3.2, UI.md §3.4 | `components/ListingTable.tsx`, `lib/format.ts:9-13` (`dropColor`) | `tests/format-telegram.test.ts` — dropPct math + dropColor tiered Tailwind classes (red ≥10%, amber ≥5%, slate otherwise) | ✅ |
+| SRS-FR-26 | View Transition | SRS §3.2 | `app/globals.css` `@view-transition { navigation: auto }` + `.modal-hero` shared-element name; respects `prefers-reduced-motion` | manual on supporting browser (Chrome 111+, Safari 18+, Edge 111+); Firefox falls back to snap behaviour | 🟡 *(implemented 2026-05-22; no automated visual test)* |
+| SRS-FR-27 | Row is clickable + keyboard-accessible | UI.md §3.4 | `components/ListingTable.tsx` — `role="button"`, `tabIndex=0`, Enter+Space key handlers, `aria-label`, focus-visible ring | manual a11y (axe) | 🟡 |
+| SRS-FR-28 | Card list <1024px | Screens.md S-01 mobile | `components/ListingCard.tsx`; `lg:hidden` breakpoint on cards, `lg:block` on table | manual responsive | 🟡 |
+
+**Table coverage delta (2026-05-22):** 4 rows moved from 🟡/🔴 → ✅. `tests/listings.test.ts` adds 40 cases. SRS-FR-24 spec drift (12 vs 25) resolved. SRS-FR-26 View Transitions implemented via progressive-enhancement CSS (no framework upgrade required).
 
 ### Leads (7 reqs)
 | Req ID | Description | Source | Implementation | Test / verification | Status |

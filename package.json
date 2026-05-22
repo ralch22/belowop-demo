@@ -9,8 +9,9 @@
     "lint": "next lint",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",
-    "test": "tsx tests/description-parser.test.ts && tsx tests/format-telegram.test.ts",
+    "test": "tsx tests/description-parser.test.ts && tsx tests/format-telegram.test.ts && tsx tests/listings.test.ts",
     "test:format": "tsx tests/format-telegram.test.ts",
+    "test:listings": "tsx tests/listings.test.ts",
     "test:hmac": "tsx tests/hmac.test.ts",
     "check:pf": "bash scripts/check-no-pf-refs.sh"
   },

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   applyFilters,
   buildOpaqueMaps,
+  filtersFromParams,
+  paramsFromFilters,
   type Filters,
   type Listing,
 } from '@/lib/listings';
@@ -19,18 +21,6 @@ import { Bell } from 'lucide-react';
 
 // SRS-FR-24: paginate the public table 25 per page.
 const PAGE_SIZE = 25;
-
-function filtersFromParams(p: URLSearchParams): Filters {
-  return {
-    type: (p.get('type') as Filters['type']) ?? 'all',
-    beds: (p.get('beds') as Filters['beds']) ?? 'any',
-    community: p.get('area') ?? undefined,
-    developer: p.get('dev') ?? undefined,
-    minDropPct: p.get('drop') ? Number(p.get('drop')) : undefined,
-    maxPrice: p.get('max') ? Number(p.get('max')) : undefined,
-    sort: (p.get('sort') as Filters['sort']) ?? 'newest',
-  };
-}
 
 export default function ListingsView({
   initialListings,
@@ -59,18 +49,7 @@ export default function ListingsView({
 
   const updateParams = useCallback(
     (next: Partial<Filters>) => {
-      const params = new URLSearchParams(search.toString());
-      const apply = (k: string, v: string | number | undefined | null) => {
-        if (v === undefined || v === null || v === '' || v === 'all' || v === 'any' || v === 0) params.delete(k);
-        else params.set(k, String(v));
-      };
-      if ('type' in next) apply('type', next.type);
-      if ('beds' in next) apply('beds', next.beds);
-      if ('community' in next) apply('area', next.community);
-      if ('developer' in next) apply('dev', next.developer);
-      if ('minDropPct' in next) apply('drop', next.minDropPct);
-      if ('maxPrice' in next) apply('max', next.maxPrice);
-      if ('sort' in next) apply('sort', next.sort);
+      const params = paramsFromFilters(new URLSearchParams(search.toString()), next);
       router.replace(`/?${params.toString()}`, { scroll: false });
     },
     [router, search],

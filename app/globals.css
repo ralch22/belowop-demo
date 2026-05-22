@@ -21,3 +21,29 @@ html, body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ----------------------------------------------------------------------- */
+/* SRS-FR-26 — View Transitions (progressive enhancement)                    */
+/*                                                                            */
+/* Browsers that support the View Transitions API (Chrome 111+, Safari 18+,   */
+/* Edge 111+) get smooth crossfades when the URL changes (e.g. opening the    */
+/* lead modal via ?inquire=u-xxx, applying filters). Older browsers — Firefox */
+/* as of writing — just snap as before. Zero JS cost, zero framework upgrade. */
+/*                                                                            */
+/* Disabled automatically when prefers-reduced-motion is set (above).         */
+/* ----------------------------------------------------------------------- */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Inside the lead modal: name the hero so a shared-element morph can pick it
+ * up if/when we add view-transition-name to the table row image too. */
+.modal-hero {
+  view-transition-name: lead-hero;
+}

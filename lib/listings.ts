@@ -85,6 +85,76 @@ export interface Filters {
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'drop_desc' | 'ppsqm_asc';
 }
 
+// SRS-FR-23: URL params ↔ Filters round-trip.
+//
+// Why this lives here (not in the component): the serialization shape is
+// part of the public URL contract — buyers share `/?type=ready&drop=10`
+// links, so changes need a test. Keeping the conversion pure makes it
+// fast to unit-test without spinning up Next router + JSDOM.
+
+/**
+ * Read filter state from a URLSearchParams.
+ * - Unknown query keys are ignored.
+ * - Numeric coercion: `drop` and `max` are passed through `Number()`; NaN
+ *   collapses to undefined so we don't break `applyFilters`.
+ * - All other keys passthrough as strings; the consumer enforces types.
+ */
+export function filtersFromParams(p: URLSearchParams): Filters {
+  const numOrUndef = (raw: string | null): number | undefined => {
+    if (raw === null || raw === '') return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  return {
+    type: (p.get('type') as Filters['type']) ?? 'all',
+    beds: (p.get('beds') as Filters['beds']) ?? 'any',
+    community: p.get('area') ?? undefined,
+    developer: p.get('dev') ?? undefined,
+    minDropPct: numOrUndef(p.get('drop')),
+    maxPrice: numOrUndef(p.get('max')),
+    sort: (p.get('sort') as Filters['sort']) ?? 'newest',
+  };
+}
+
+/**
+ * Apply a partial Filters update to an existing URLSearchParams, mutating
+ * the params object in place. "Default" values (all/any/0/undefined/empty)
+ * are deleted from the params so the URL stays clean — `/` rather than
+ * `/?type=all&beds=any&drop=0`.
+ *
+ * Returns the same params object for convenient chaining.
+ */
+export function paramsFromFilters(params: URLSearchParams, next: Partial<Filters>): URLSearchParams {
+  // Per-key default — anything matching this strips the key from the URL so
+  // the canonical empty URL is just `/`, not `/?type=all&sort=newest&...`.
+  const defaultFor: Record<string, string | number | undefined> = {
+    type: 'all',
+    beds: 'any',
+    sort: 'newest',
+  };
+  const apply = (k: string, v: string | number | undefined | null) => {
+    if (
+      v === undefined ||
+      v === null ||
+      v === '' ||
+      v === 0 ||
+      v === defaultFor[k]
+    ) {
+      params.delete(k);
+    } else {
+      params.set(k, String(v));
+    }
+  };
+  if ('type' in next) apply('type', next.type);
+  if ('beds' in next) apply('beds', next.beds);
+  if ('community' in next) apply('area', next.community);
+  if ('developer' in next) apply('dev', next.developer);
+  if ('minDropPct' in next) apply('drop', next.minDropPct);
+  if ('maxPrice' in next) apply('max', next.maxPrice);
+  if ('sort' in next) apply('sort', next.sort);
+  return params;
+}
+
 export function applyFilters(items: Listing[], f: Filters): Listing[] {
   let r = items.slice();
   if (f.type && f.type !== 'all') r = r.filter((l) => l.type === f.type);
