@@ -17,14 +17,57 @@ import { sendWhatsapp } from '@/lib/twilio';
 import { sendTelegram } from '@/lib/telegram';
 import { rateLimit } from '@/lib/kv';
 import { formatWhatsapp, formatTelegram, type AlertContext } from '@/lib/alert-format';
+import { timingSafeEqual } from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+/**
+ * Accept three callers:
+ *   1. Vercel cron (header x-vercel-cron: 1) — automatic daily fire
+ *   2. CRON_SECRET Bearer — legacy curl path
+ *   3. ADMIN_TOKEN via ?token=… or Authorization: Bearer — manual ops
+ */
 function authorize(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  return req.headers.get('authorization') === `Bearer ${secret}`;
+  // (1) Vercel cron — trusted infra header.
+  if (req.headers.get('x-vercel-cron') === '1') return true;
+
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get('token');
+  const headerBearer = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const provided = queryToken || headerBearer;
+  if (!provided) return false;
+
+  // Constant-time compare against either CRON_SECRET or ADMIN_TOKEN.
+  for (const envVar of ['CRON_SECRET', 'ADMIN_TOKEN'] as const) {
+    const expected = process.env[envVar];
+    if (!expected) continue;
+    try {
+      const a = Buffer.from(provided);
+      const b = Buffer.from(expected);
+      if (a.length === b.length && timingSafeEqual(a, b)) return true;
+    } catch {
+      // fall through
+    }
+  }
+  return false;
+}
+
+/**
+ * Mark all currently pending alert_events as dispatched WITHOUT firing.
+ * Useful for the one-time backlog cleanup after the initial mass ingestion —
+ * avoids dumping 254 events into the Telegram channel at once.
+ *
+ * Use: ?action=mark-baseline (admin auth required)
+ */
+async function markBaseline(): Promise<{ marked: number }> {
+  const r = await sql`
+    UPDATE alert_events
+    SET dispatched_at = NOW(), dispatch_error = NULL
+    WHERE dispatched_at IS NULL
+    RETURNING id;
+  `;
+  return { marked: r.rowCount ?? 0 };
 }
 
 function matchesFilter(filters: Record<string, unknown>, l: { type: string; community: string; current: number; dropPct: number }): boolean {
@@ -40,6 +83,15 @@ function matchesFilter(filters: Record<string, unknown>, l: { type: string; comm
 export async function GET(req: Request) {
   if (!authorize(req)) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   if (!isDbConfigured()) return NextResponse.json({ ok: true, skipped: 'db not configured' });
+
+  // Optional escape hatch: mark all pending events as dispatched without
+  // actually firing them. Used to clear the backlog after the initial
+  // mass ingest so future runs only fire on NEW data.
+  const action = new URL(req.url).searchParams.get('action');
+  if (action === 'mark-baseline') {
+    const result = await markBaseline();
+    return NextResponse.json({ ok: true, action: 'mark-baseline', ...result });
+  }
 
   const events = await pendingAlertEvents(25);
   const subs = await activeSubscriptions();
