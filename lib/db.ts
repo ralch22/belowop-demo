@@ -513,3 +513,94 @@ export async function recentIngestionRuns(limit = 50): Promise<IngestionRunRow[]
   `;
   return r.rows;
 }
+
+// ---------------------------------------------------------------------------
+// Stale-listing pruning (migration 0004, task #66)
+//
+// Apify webhook calls these in sequence at the end of each run:
+//   markSeen(externalRefs)         — last_seen_at=NOW(), miss_count=0
+//   incrementMissesAndPrune()      — miss_count++; withdraw at >=2
+// ---------------------------------------------------------------------------
+
+/**
+ * Mark a batch of listings as seen in the current run. Resets miss_count to 0
+ * and stamps last_seen_at. No-op for refs that don't exist (the matching
+ * upsert call earlier in the pipeline created them).
+ */
+export async function markListingsSeen(externalRefs: string[]): Promise<number> {
+  if (externalRefs.length === 0) return 0;
+  // Postgres array literal with double-quoted strings.
+  const arr = `{${externalRefs.map((r) => '"' + r.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',')}}`;
+  const r = await sql`
+    UPDATE listings
+    SET miss_count = 0, last_seen_at = NOW()
+    WHERE external_ref = ANY(${arr}::text[])
+    RETURNING id;
+  `;
+  return r.rowCount ?? 0;
+}
+
+/**
+ * Increment miss_count for active listings that were NOT in the latest seen-set.
+ * Any listing reaching miss_count >= 2 is marked withdrawn and a 'withdrawn'
+ * alert_event is queued.
+ *
+ * Returns { incremented, withdrawn } — incremented = listings whose counter
+ * went up but didn't yet cross the threshold; withdrawn = listings just marked
+ * stale.
+ *
+ * IMPORTANT: only call this when the run has confirmed-successful items.
+ * A run that returns 0 items must NOT trigger pruning — that's the watchdog
+ * cron's job, and the right response is "alarm", not "withdraw everything".
+ */
+export async function incrementMissesAndPrune(seenRefs: string[]): Promise<{
+  incremented: number;
+  withdrawn: number;
+}> {
+  if (seenRefs.length === 0) {
+    return { incremented: 0, withdrawn: 0 };
+  }
+  const arr = `{${seenRefs.map((r) => '"' + r.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',')}}`;
+
+  // Step 1: increment miss_count for active listings we did NOT see.
+  // Run BEFORE the threshold check so this run's incremented rows are eligible.
+  const inc = await sql<{ id: number }>`
+    UPDATE listings
+    SET miss_count = miss_count + 1
+    WHERE withdrawn_at IS NULL
+      AND NOT (external_ref = ANY(${arr}::text[]))
+    RETURNING id;
+  `;
+
+  // Step 2: withdraw anything that just crossed the 2-miss threshold.
+  // Emit a 'withdrawn' alert_event for each so downstream channels can notify.
+  const w = await sql<{ id: number; external_ref: string; current_price: number }>`
+    UPDATE listings
+    SET withdrawn_at = NOW()
+    WHERE withdrawn_at IS NULL AND miss_count >= 2
+    RETURNING id, external_ref, current_price;
+  `;
+  for (const row of w.rows) {
+    await sql`
+      INSERT INTO alert_events (listing_id, kind, prev_price, new_price, drop_pct)
+      VALUES (${row.id}, 'withdrawn', ${row.current_price}, ${row.current_price}, 0);
+    `;
+  }
+
+  return {
+    incremented: (inc.rowCount ?? 0) - (w.rowCount ?? 0),
+    withdrawn: w.rowCount ?? 0,
+  };
+}
+
+export interface PruningRisk {
+  one_miss: number;
+  would_withdraw: number;
+  never_re_seen: number;
+  fresh_24h: number;
+}
+
+export async function pruningRisk(): Promise<PruningRisk> {
+  const r = await sql<PruningRisk>`SELECT * FROM v_listings_pruning_risk;`;
+  return r.rows[0];
+}

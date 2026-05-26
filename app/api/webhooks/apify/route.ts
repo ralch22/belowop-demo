@@ -31,6 +31,8 @@ import {
   startIngestionRun,
   completeIngestionRun,
   failIngestionRun,
+  markListingsSeen,
+  incrementMissesAndPrune,
 } from '@/lib/db';
 import {
   parseOp,
@@ -386,6 +388,11 @@ export async function POST(req: Request) {
     opParsed: 0,
   };
 
+  // Collect successfully-processed external_refs so we can run stale-listing
+  // pruning after the loop. Only refs that successfully upserted are added —
+  // items that errored aren't proof of presence on PF.
+  const seenRefs: string[] = [];
+
   for (const item of items) {
     try {
       const externalRef = mapExternalRef(item);
@@ -450,10 +457,33 @@ export async function POST(req: Request) {
       } else {
         stats.items_unchanged++;
       }
+      seenRefs.push(externalRef);
     } catch (e) {
       console.error('[apify webhook] item failed', e);
       stats.items_errored++;
     }
+  }
+
+  // Stale-listing pruning (task #66, 2-miss conservative).
+  //
+  // Only run pruning when we have a healthy seen-set. A run that returns 0
+  // items (proxy block, anti-bot, network error) must NOT trigger mass
+  // withdrawal — the watchdog cron handles that case by alerting.
+  if (seenRefs.length > 0) {
+    try {
+      await markListingsSeen(seenRefs);
+      const pruning = await incrementMissesAndPrune(seenRefs);
+      stats.items_withdrawn = pruning.withdrawn;
+      console.log(
+        `[apify webhook] pruning: ${pruning.incremented} miss++, ${pruning.withdrawn} withdrawn`,
+      );
+    } catch (e) {
+      console.error('[apify webhook] pruning step failed', e);
+      // Don't fail the run for a pruning hiccup — the data ingestion already
+      // succeeded. Pruning will catch up on the next run.
+    }
+  } else {
+    console.warn('[apify webhook] no items seen — skipping pruning to avoid mass withdrawal');
   }
 
   // Close the run row with final stats.
