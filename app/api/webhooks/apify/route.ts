@@ -42,7 +42,10 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // ---------------------------------------------------------------------------
-// azzouzana output schema (subset we care about)
+// Internal scraped-item shape (azzouzana's original schema)
+//
+// All scrapers normalise into this interface before downstream parsing. See
+// `normaliseShahidirfan()` below for the shahidirfan → azzouzana translation.
 // ---------------------------------------------------------------------------
 
 interface AzzouzanaItem {
@@ -70,6 +73,111 @@ interface AzzouzanaItem {
   broker?: { name?: string; company?: string };
   agent?: { name?: string };
   share_url?: string;
+}
+
+// ---------------------------------------------------------------------------
+// shahidirfan/Propertyfinder-Scraper output schema (subset)
+//
+// shahidirfan delivers richer data than azzouzana but in a flatter, camelCase
+// shape. Detection key: presence of `propertyType` (camelCase) — azzouzana
+// uses `property_type` (snake_case).
+// ---------------------------------------------------------------------------
+
+interface ShahidirfanItem {
+  id?: string;
+  listingId?: string;
+  reference?: string;
+  title?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  location?: string;
+  locationPath?: string;       // "1.9754.9755.12582.17098" (dotted IDs)
+  locationPathName?: string;   // "Dubai, Dubai Harbour, Emaar Beachfront, Seapoint"
+  locationSlug?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;               // in areaUnit (usually sqft)
+  areaUnit?: string;           // "sqft" | "sqm"
+  completionStatus?: string;
+  furnished?: string;
+  propertyType?: string;       // "Apartment" | "Villa" etc.
+  amenities?: string[];        // short codes
+  amenityNames?: string[];     // human-readable
+  images?: string[];           // direct URL list (no nested object)
+  listedDate?: string;
+  rera?: string;
+  agentName?: string;
+  brokerName?: string;
+  detailsUrl?: string;
+  url?: string;
+}
+
+function isShahidirfan(item: unknown): item is ShahidirfanItem {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    ('propertyType' in item || 'locationPathName' in item || 'listedDate' in item)
+  );
+}
+
+/**
+ * Translate a shahidirfan-shaped item to the AzzouzanaItem shape we already
+ * parse downstream. Lossy in places (we ignore agentName/brokerName/etc.) but
+ * preserves everything the existing parsers need.
+ *
+ * Built 2026-05-26 after azzouzana stopped producing items and we switched to
+ * shahidirfan/Propertyfinder-Scraper. See docs/APIFY-PIPELINE-STATE.md.
+ */
+function normaliseShahidirfan(s: ShahidirfanItem): AzzouzanaItem {
+  // Build location_tree[] from "Dubai, Dubai Harbour, Emaar Beachfront, …"
+  const tree =
+    s.locationPathName
+      ?.split(',')
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((name, i) => ({ name, level: String(i), type: undefined })) ?? [];
+
+  // Build location.full_name from `location` (which is e.g. "Tower 2, Building, Community, City")
+  const locationName = s.location?.split(',')?.[0]?.trim();
+
+  return {
+    id: s.id,
+    reference: s.reference,
+    property_type: s.propertyType,
+    bedrooms: s.bedrooms != null ? String(s.bedrooms) : undefined,
+    bedrooms_value: s.bedrooms,
+    bathrooms: s.bathrooms != null ? String(s.bathrooms) : undefined,
+    bathrooms_value: s.bathrooms,
+    size:
+      s.area != null
+        ? { value: s.area, unit: s.areaUnit ?? 'sqft' }
+        : undefined,
+    built_up_area: s.areaUnit === 'sqft' ? s.area : undefined,
+    completion_status: s.completionStatus,
+    furnished: s.furnished,
+    amenities: s.amenities,
+    amenity_names: s.amenityNames,
+    price:
+      s.price != null
+        ? { value: s.price, currency: s.currency ?? 'AED' }
+        : undefined,
+    // shahidirfan returns image URLs as a flat array of strings; azzouzana
+    // returns [{small,medium,full}]. Wrap as {full: …} so mapImages() works.
+    images: s.images?.map((url) => ({ full: url })),
+    listed_date: s.listedDate,
+    description: s.description,
+    title: s.title,
+    location: {
+      full_name: s.location,
+      name: locationName,
+      path_name: s.locationPathName,
+    },
+    location_tree: tree,
+    broker: s.brokerName ? { name: s.brokerName, company: s.brokerName } : undefined,
+    agent: s.agentName ? { name: s.agentName } : undefined,
+    share_url: s.detailsUrl ?? s.url,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +301,23 @@ async function fetchDataset(datasetId: string, limit = 1000): Promise<AzzouzanaI
     (token ? `&token=${token}` : '');
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Apify dataset fetch ${resp.status}`);
-  return resp.json();
+  const raw: unknown[] = await resp.json();
+
+  // Auto-detect scraper variant and normalise. Today we accept either
+  // azzouzana (snake_case) or shahidirfan (camelCase). Per-item detection
+  // is robust to a future schedule that mixes scrapers.
+  let shahidirfanCount = 0;
+  const normalised = raw.map((item) => {
+    if (isShahidirfan(item)) {
+      shahidirfanCount++;
+      return normaliseShahidirfan(item);
+    }
+    return item as AzzouzanaItem;
+  });
+  if (shahidirfanCount > 0) {
+    console.log(`[apify webhook] normalised ${shahidirfanCount}/${raw.length} items from shahidirfan schema`);
+  }
+  return normalised;
 }
 
 export async function POST(req: Request) {
