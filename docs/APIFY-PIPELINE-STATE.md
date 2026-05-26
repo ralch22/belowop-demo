@@ -1,7 +1,31 @@
 # Apify Pipeline — Live Wiring State
 
-**Updated:** 2026-05-26
-**Status:** ✅ Wired end-to-end · ⚠️ Actor producing 0 items today (transient, monitor)
+**Updated:** 2026-05-26 (revision 2 — switched to shahidirfan, now producing items)
+**Status:** ✅ Live · ✅ Data flowing · 80 real listings ingested 2026-05-26 11:29 UTC
+
+## TL;DR (latest)
+
+After azzouzana stopped producing items (likely PF anti-bot block), switched
+the task to **shahidirfan/Propertyfinder-Scraper**. First production run
+returned 80 real "Below OP" listings in 39 seconds. Webhook delivered with
+200 OK. All 80 items normalised through the schema adapter (`isShahidirfan`
++ `normaliseShahidirfan` in `app/api/webhooks/apify/route.ts`) and ingested
+via the existing parser path.
+
+**Current Apify resources:**
+
+| Resource | ID | Notes |
+|---|---|---|
+| Task `belowop-pf-distress` | `V0jMKxt40XCabABRB` | shahidirfan~Propertyfinder-Scraper |
+| Webhook | `ZI313ilyRrxX38nBJ` | ACTOR.RUN.SUCCEEDED → /api/webhooks/apify (Bearer auth) |
+| Schedule | `6raEPtjb3hfv0ffC1` | `0 */6 * * *` UTC, enabled |
+
+Previous azzouzana-based resources (Voer7UfEC0XaQfw9N, TEUfokbCWlYz97dDE,
+6ouP8WdeH1zYctqkt) were deleted in the same session.
+
+---
+
+## Original wiring journey (kept for context)
 
 ## What's wired (API-driven, no UI clicks)
 
