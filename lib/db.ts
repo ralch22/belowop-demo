@@ -389,3 +389,127 @@ export async function unsubscribe(token: string): Promise<boolean> {
   `;
   return r.rowCount! > 0;
 }
+
+// ---------------------------------------------------------------------------
+// Ingestion observability (migration 0003)
+//
+// Every Apify webhook call records its lifecycle here. Read by:
+//   - /admin/pipeline           (task #67, the dashboard)
+//   - /api/cron/watchdog        (task #68, the alarm)
+//   - v_ingestion_freshness DB  (the "is data flowing?" headline)
+// ---------------------------------------------------------------------------
+
+export interface IngestionRunStats {
+  items_received: number;
+  items_inserted: number;
+  items_updated: number;
+  items_unchanged: number;
+  items_withdrawn: number;
+  items_errored: number;
+}
+
+export async function startIngestionRun(input: {
+  runId: string;
+  datasetId: string;
+  actorName?: string;
+}): Promise<number> {
+  // Idempotent: if Apify retries the webhook for the same run_id we just
+  // bump the started_at + reset stats — caller re-runs the upsert loop.
+  const r = await sql<{ id: number }>`
+    INSERT INTO ingestion_runs (run_id, dataset_id, actor_name, started_at, status)
+    VALUES (${input.runId}, ${input.datasetId}, ${input.actorName ?? null}, NOW(), 'running')
+    ON CONFLICT (run_id) DO UPDATE SET
+      dataset_id = EXCLUDED.dataset_id,
+      actor_name = COALESCE(EXCLUDED.actor_name, ingestion_runs.actor_name),
+      started_at = NOW(),
+      status     = 'running',
+      error_text = NULL,
+      items_received  = 0,
+      items_inserted  = 0,
+      items_updated   = 0,
+      items_unchanged = 0,
+      items_withdrawn = 0,
+      items_errored   = 0
+    RETURNING id;
+  `;
+  return r.rows[0].id;
+}
+
+export async function completeIngestionRun(
+  id: number,
+  stats: IngestionRunStats & { rawStats?: Record<string, unknown> },
+  status: 'succeeded' | 'failed' | 'partial' = 'succeeded',
+  errorText?: string,
+): Promise<void> {
+  const raw = stats.rawStats ?? {};
+  await sql`
+    UPDATE ingestion_runs SET
+      completed_at    = NOW(),
+      items_received  = ${stats.items_received},
+      items_inserted  = ${stats.items_inserted},
+      items_updated   = ${stats.items_updated},
+      items_unchanged = ${stats.items_unchanged},
+      items_withdrawn = ${stats.items_withdrawn},
+      items_errored   = ${stats.items_errored},
+      status          = ${status},
+      error_text      = ${errorText ?? null},
+      raw_stats       = ${JSON.stringify(raw)}::jsonb
+    WHERE id = ${id};
+  `;
+}
+
+export async function failIngestionRun(id: number, errorText: string): Promise<void> {
+  await sql`
+    UPDATE ingestion_runs SET
+      completed_at = NOW(),
+      status       = 'failed',
+      error_text   = ${errorText}
+    WHERE id = ${id};
+  `;
+}
+
+export interface IngestionFreshness {
+  last_run_started_at: string | null;
+  last_success_at: string | null;
+  runs_24h: number;
+  successes_24h: number;
+  last_new_listing_at: string | null;
+  new_listings_24h: number;
+  updates_24h: number;
+  withdrawn_24h: number;
+  active_listings_total: number;
+}
+
+export async function ingestionFreshness(): Promise<IngestionFreshness> {
+  const r = await sql<IngestionFreshness>`SELECT * FROM v_ingestion_freshness;`;
+  return r.rows[0];
+}
+
+export interface IngestionRunRow {
+  id: number;
+  run_id: string;
+  dataset_id: string;
+  actor_name: string | null;
+  started_at: string;
+  completed_at: string | null;
+  items_received: number;
+  items_inserted: number;
+  items_updated: number;
+  items_unchanged: number;
+  items_withdrawn: number;
+  items_errored: number;
+  status: 'running' | 'succeeded' | 'failed' | 'partial';
+  error_text: string | null;
+}
+
+export async function recentIngestionRuns(limit = 50): Promise<IngestionRunRow[]> {
+  const r = await sql<IngestionRunRow>`
+    SELECT id, run_id, dataset_id, actor_name, started_at::text, completed_at::text,
+           items_received, items_inserted, items_updated, items_unchanged,
+           items_withdrawn, items_errored, status, error_text
+    FROM ingestion_runs
+    ORDER BY started_at DESC
+    LIMIT ${limit};
+  `;
+  return r.rows;
+}

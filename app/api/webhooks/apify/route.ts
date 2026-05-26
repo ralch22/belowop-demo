@@ -25,7 +25,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { upsertScrapedListing, isDbConfigured } from '@/lib/db';
+import {
+  upsertScrapedListing,
+  isDbConfigured,
+  startIngestionRun,
+  completeIngestionRun,
+  failIngestionRun,
+} from '@/lib/db';
 import {
   parseOp,
   parseHandover,
@@ -337,26 +343,55 @@ export async function POST(req: Request) {
 
   const runId = payload.eventData?.actorRunId ?? payload.resource?.id;
   const datasetId = payload.resource?.defaultDatasetId;
+  const actorId = payload.eventData?.actorId;
 
   if (!datasetId) {
     return NextResponse.json({ ok: false, error: 'no datasetId in payload' }, { status: 400 });
+  }
+  if (!runId) {
+    return NextResponse.json({ ok: false, error: 'no runId in payload' }, { status: 400 });
+  }
+
+  // Migration 0003: log the run lifecycle. Idempotent on (run_id) — Apify
+  // retries land on the same row.
+  let ingestionRunDbId: number | null = null;
+  try {
+    ingestionRunDbId = await startIngestionRun({ runId, datasetId, actorName: actorId });
+  } catch (e) {
+    // Don't bail the webhook if logging itself fails — ingestion is the
+    // critical path. Just record + continue.
+    console.error('[apify webhook] failed to open ingestion_runs row', e);
   }
 
   let items: AzzouzanaItem[];
   try {
     items = await fetchDataset(datasetId, 2000);
   } catch (e) {
+    if (ingestionRunDbId !== null) {
+      await failIngestionRun(ingestionRunDbId, `dataset fetch: ${(e as Error).message}`).catch(() => {});
+    }
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 502 });
   }
 
-  const stats = { received: items.length, upserted: 0, newListings: 0, priceDrops: 0, opParsed: 0, errors: 0 };
+  // Stats counters mirror the ingestion_runs columns exactly.
+  const stats = {
+    items_received: items.length,
+    items_inserted: 0,
+    items_updated: 0,
+    items_unchanged: 0,
+    items_withdrawn: 0,
+    items_errored: 0,
+    // Forensic detail; persisted in raw_stats JSONB.
+    priceDrops: 0,
+    opParsed: 0,
+  };
 
   for (const item of items) {
     try {
       const externalRef = mapExternalRef(item);
       const currentPrice = item.price?.value ?? 0;
       if (!externalRef || !currentPrice) {
-        stats.errors++;
+        stats.items_errored++;
         continue;
       }
 
@@ -407,13 +442,41 @@ export async function POST(req: Request) {
         buaSqft: item.built_up_area ?? parseBua(desc),
         furnished: item.furnished ?? null,
       });
-      stats.upserted++;
-      if (result.isNew) stats.newListings++;
-      if (result.priceDropped) stats.priceDrops++;
+      if (result.isNew) {
+        stats.items_inserted++;
+      } else if (result.priceDropped || result.previousPrice !== currentPrice) {
+        stats.items_updated++;
+        if (result.priceDropped) stats.priceDrops++;
+      } else {
+        stats.items_unchanged++;
+      }
     } catch (e) {
       console.error('[apify webhook] item failed', e);
-      stats.errors++;
+      stats.items_errored++;
     }
+  }
+
+  // Close the run row with final stats.
+  if (ingestionRunDbId !== null) {
+    const finalStatus =
+      stats.items_errored === 0
+        ? 'succeeded'
+        : stats.items_errored < items.length
+          ? 'partial'
+          : 'failed';
+    await completeIngestionRun(
+      ingestionRunDbId,
+      {
+        items_received: stats.items_received,
+        items_inserted: stats.items_inserted,
+        items_updated: stats.items_updated,
+        items_unchanged: stats.items_unchanged,
+        items_withdrawn: stats.items_withdrawn,
+        items_errored: stats.items_errored,
+        rawStats: { priceDrops: stats.priceDrops, opParsed: stats.opParsed, runId, datasetId, actorId },
+      },
+      finalStatus,
+    ).catch((e) => console.error('[apify webhook] failed to close ingestion_runs row', e));
   }
 
   console.log('[apify webhook]', runId, stats);
