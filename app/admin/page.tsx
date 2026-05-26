@@ -131,6 +131,7 @@ export default async function AdminPage() {
           <li>Alert preview (live): <Link className="text-brand hover:underline" href="/admin/preview">/admin/preview</Link></li>
           <li>Parser test: <Link className="text-brand hover:underline" href="/admin/ingest">/admin/ingest</Link></li>
           <li>WhatsApp Channel relay: <Link className="text-brand hover:underline" href="/admin/relay">/admin/relay</Link></li>
+          <li>Pipeline health: <Link className="text-brand hover:underline font-semibold" href="/admin/pipeline">/admin/pipeline</Link> ← ingestion runs + stale pruning</li>
         </ul>
       </div>
     </div>
