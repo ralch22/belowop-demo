@@ -72,20 +72,23 @@ async function checkAlarms(): Promise<Alarm[]> {
   // (1) Pipeline silent for too long.
   const hoursSinceRun = f.last_run_started_at
     ? (now - new Date(f.last_run_started_at).getTime()) / 3.6e6
-    : Infinity;
-  if (hoursSinceRun > STALE_RUN_HOURS) {
+    : null;
+  if (hoursSinceRun === null || hoursSinceRun > STALE_RUN_HOURS) {
     alarms.push({
       code: 'STALE_PIPELINE',
-      message: `No Apify run for ${Math.round(hoursSinceRun)}h (threshold ${STALE_RUN_HOURS}h)`,
-      detail: f.last_run_started_at ? `Last run: ${f.last_run_started_at}` : 'No runs ever recorded',
+      message:
+        hoursSinceRun === null
+          ? `No Apify runs ever recorded (threshold ${STALE_RUN_HOURS}h)`
+          : `No Apify run for ${Math.round(hoursSinceRun)}h (threshold ${STALE_RUN_HOURS}h)`,
+      detail: f.last_run_started_at ? `Last run: ${f.last_run_started_at}` : 'No runs in ingestion_runs table',
     });
   }
 
   // (2) Data is stale — runs may be firing but returning no new items.
   const hoursSinceData = f.last_new_listing_at
     ? (now - new Date(f.last_new_listing_at).getTime()) / 3.6e6
-    : Infinity;
-  if (hoursSinceData > STALE_DATA_HOURS) {
+    : null;
+  if (hoursSinceData !== null && hoursSinceData > STALE_DATA_HOURS) {
     alarms.push({
       code: 'STALE_DATA',
       message: `No new listings for ${Math.round(hoursSinceData)}h (threshold ${STALE_DATA_HOURS}h)`,
