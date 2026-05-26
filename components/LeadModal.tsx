@@ -249,6 +249,16 @@ export default function LeadModal({
               >
                 {submitting ? 'Sending…' : 'Request details'}
               </button>
+              {(!name || !phone || !consent) && !submitting && (
+                <p
+                  aria-live="polite"
+                  className="text-center text-[11px] text-amber-700 dark:text-amber-400"
+                >
+                  {!name && 'Name required · '}
+                  {!phone && 'WhatsApp number required · '}
+                  {!consent && 'Tick the consent box'}
+                </p>
+              )}
               <p className="text-center text-xs text-slate-600 dark:text-slate-400">We&apos;ll WhatsApp you back within the hour.</p>
             </form>
           </>
