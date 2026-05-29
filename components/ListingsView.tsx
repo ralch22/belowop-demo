@@ -37,9 +37,17 @@ const FILTER_DEFAULTS: Partial<Filters> = {
 export default function ListingsView({
   initialListings,
   dataSource = 'seed',
+  lastIngestAt = null,
 }: {
   initialListings: Listing[];
   dataSource?: 'db' | 'seed';
+  /**
+   * Timestamp of the last successful ingestion run (v_ingestion_freshness
+   * .last_success_at). This is the TRUE "data was refreshed" signal. When
+   * present we label the pill from it; otherwise we fall back to the newest
+   * listing's publication date (an approximation used in seed/dev mode).
+   */
+  lastIngestAt?: string | null;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -60,10 +68,18 @@ export default function ListingsView({
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // FIX-12: derive freshness from MAX(listedAt) over the inbound listings.
-  // This is an interim signal until the ingestion schedule lands (path A) —
-  // see BUILD_BRIEF.md §FIX-12.
+  // Freshness label. The ingestion schedule has now landed, so prefer the real
+  // last-successful-ingest timestamp (v_ingestion_freshness.last_success_at) —
+  // that's what "refreshed Xh ago" should mean. Only fall back to MAX(listedAt)
+  // — the newest listing's *publication* date — in seed/dev mode where no
+  // ingestion run exists. (Resolves the misleading "refreshed 2d ago" pill:
+  // MAX(listedAt) reflects how old the freshest source listing is, not when we
+  // last pulled data.)
   const lastRefreshedLabel = useMemo(() => {
+    if (lastIngestAt) {
+      const t = new Date(lastIngestAt).getTime();
+      if (Number.isFinite(t)) return relativeTime(new Date(t).toISOString());
+    }
     if (initialListings.length === 0) return null;
     let maxTs = 0;
     for (const l of initialListings) {
@@ -72,7 +88,7 @@ export default function ListingsView({
     }
     if (maxTs === 0) return null;
     return relativeTime(new Date(maxTs).toISOString());
-  }, [initialListings]);
+  }, [lastIngestAt, initialListings]);
 
   useEffect(() => { setPage(1); }, [filters]);
 
