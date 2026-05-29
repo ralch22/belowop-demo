@@ -96,7 +96,14 @@ async function resolveListing(ref: string): Promise<{ listing: Listing; alternat
           community: r.community,
           subLocation: r.sub_location !== r.project ? r.sub_location : null,
           type: r.type,
-          beds: r.beds === 'studio' ? 'studio' : Number(r.beds),
+          beds:
+            r.beds === 'studio'
+              ? 'studio'
+              : r.beds === '4+'
+                ? '4+'
+                : Number.isFinite(Number(r.beds))
+                  ? Number(r.beds)
+                  : 'studio', // unparseable → safe fallback (never NaN)
           sqft: r.sqft,
           currentPrice: Number(r.current_price),
           originalPrice: Number(r.original_price),
@@ -178,8 +185,13 @@ export async function GET(req: Request) {
   // fails for hosts that block its default UA (PF CDN, possibly others).
   const imageIds = await inlineImages(rawImageUrls);
 
-  const delta = dropPct(listing.currentPrice, listing.originalPrice);
-  const dropLabel = `${Math.abs(delta).toFixed(0)}% below OP`;
+  // FIX-01: only show the drop pill when a real Original Price is known. DB
+  // rows with no parsed OP arrive here as 0 (Number(null)); dropPct on those
+  // yields Infinity, so guard before rendering "…% below OP".
+  const op = listing.originalPrice;
+  const opKnown = Number.isFinite(op) && op > 0 && op !== listing.currentPrice;
+  const delta = opKnown ? dropPct(listing.currentPrice, op) : null;
+  const dropLabel = delta !== null ? `${Math.abs(delta).toFixed(0)}% below OP` : null;
   // "Project, Area" per Variables.pdf. Dedup if community already appears in
   // the project name (e.g. "Morocco Phase 2" in Damac Lagoons → don't double up).
   const project = listing.project.trim();
@@ -188,7 +200,14 @@ export async function GET(req: Request) {
     ? project
     : `${project}, ${community}`;
   const facts = [
-    listing.unitType ?? (listing.beds === 'studio' ? 'Studio' : `${listing.beds} Bedroom`),
+    listing.unitType ??
+      (listing.beds === 'studio'
+        ? 'Studio'
+        : listing.beds === '4+'
+          ? '4+ Bedroom'
+          : Number.isFinite(listing.beds as number)
+            ? `${listing.beds} Bedroom`
+            : 'Apartment'),
     `${listing.sqft.toLocaleString()} sqft`,
     // Show sub-location as the third fact slot if we have one and it's not in headline
     listing.subLocation && !headline.toLowerCase().includes(listing.subLocation.toLowerCase()) ? listing.subLocation : null,
@@ -229,26 +248,28 @@ export async function GET(req: Request) {
           ))}
         </div>
 
-        {/* Top-right drop pill */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 28,
-            right: 28,
-            background: DROP_RED,
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: 999,
-            fontSize: 36,
-            fontWeight: 700,
-            letterSpacing: -0.5,
-            display: 'flex',
-            alignItems: 'center',
-            boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
-          }}
-        >
-          {dropLabel}
-        </div>
+        {/* Top-right drop pill — only when a real OP is known */}
+        {dropLabel && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 28,
+              right: 28,
+              background: DROP_RED,
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: 999,
+              fontSize: 36,
+              fontWeight: 700,
+              letterSpacing: -0.5,
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
+            }}
+          >
+            {dropLabel}
+          </div>
+        )}
 
         {/* Bottom overlay strip */}
         <div
