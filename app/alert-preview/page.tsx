@@ -8,7 +8,7 @@ export default function AlertPreviewPage() {
   const delta = dropPct(sample.currentPrice, sample.originalPrice);
   const dropAbs = Math.abs(delta).toFixed(0);
   const sqm = Math.round(sample.sqft * 0.092903);
-  const beds = sample.beds === 'studio' ? 'Studio' : `${sample.beds} Bedroom`;
+  const beds = sample.beds === 'studio' ? 'Studio' : sample.beds === '4+' ? '4+ Bedroom' : `${sample.beds} Bedroom`;
   const unitType = sample.unitType ?? beds;
   const feats = (sample.features ?? []).slice(0, 5);
   const brokerWa = '971585276222';

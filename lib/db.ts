@@ -107,7 +107,14 @@ export function rowToListing(r: ListingRow): Listing {
     developer: r.developer ?? '',
     community: r.community,
     type: r.type,
-    beds: r.beds === 'studio' ? 'studio' : Number(r.beds),
+    beds:
+      r.beds === 'studio'
+        ? 'studio'
+        : r.beds === '4+'
+          ? '4+'
+          : Number.isFinite(Number(r.beds))
+            ? Number(r.beds)
+            : 'studio', // unparseable historical value → safe fallback (never NaN)
     sqft: r.sqft,
     currentPrice: Number(r.current_price),
     originalPrice: Number(r.original_price),

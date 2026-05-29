@@ -128,7 +128,14 @@ export default function LeadModal({
     }
   }
 
-  const delta = dropPct(listing.currentPrice, listing.originalPrice);
+  // FIX-01: only show the Δ-vs-OP figure when a real Original Price is known.
+  // After the OP-nullability fix a row may have originalPrice null/0/equal to
+  // current; dropPct on those yields Infinity/NaN/0%. Mirror the table's guard
+  // so a buyer never sees "Infinity% vs OP".
+  const op = listing.originalPrice as number | null | undefined;
+  const opKnown =
+    op != null && Number.isFinite(op) && op > 0 && op !== listing.currentPrice;
+  const delta = opKnown ? dropPct(listing.currentPrice, op as number) : null;
   // FIX-05: `??` only triggers on null/undefined — DB-sourced rows have
   // imageUrl='' (empty string), which would fall through to a broken
   // Unsplash URL built from an empty imageId. Use a truthy check and bail
@@ -225,9 +232,14 @@ export default function LeadModal({
                   </div>
                 )}
                 <p className="mt-2 font-mono text-sm tabular-nums">
-                  AED {formatAED(listing.currentPrice)}{' '}
-                  <span className={`font-semibold ${dropColor(delta)}`}>{delta.toFixed(1)}%</span>
-                  <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
+                  AED {formatAED(listing.currentPrice)}
+                  {delta !== null && (
+                    <>
+                      {' '}
+                      <span className={`font-semibold ${dropColor(delta)}`}>{delta.toFixed(1)}%</span>
+                      <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
+                    </>
+                  )}
                 </p>
               </div>
             </div>

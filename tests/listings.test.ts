@@ -21,6 +21,7 @@ import {
   type Filters,
   type Listing,
 } from '../lib/listings';
+import { bedsLabel } from '../lib/format';
 
 // ---------- micro test framework (zero deps) ----------
 
@@ -122,6 +123,37 @@ test('applyFilters · beds=4+ matches 4 and 5', () => {
 test('applyFilters · beds=any is a no-op', () => {
   const out = applyFilters(FIXTURES, { beds: 'any' });
   eq(out.length, FIXTURES.length);
+});
+
+// Regression: a listing stored with the literal '4+' bucket (not a number) must
+// still be matched by the 4+ filter. Before the fix, db.ts coerced '4+' via
+// Number('4+') → NaN, so `NaN >= 4` was false and these rows silently vanished.
+test('applyFilters · beds=4+ also matches the literal "4+" bucket', () => {
+  const withBucket = [...FIXTURES, mk({ ref: 'PF-G', beds: '4+' })];
+  const out = applyFilters(withBucket, { beds: '4+' });
+  eq(refs(out).sort(), ['PF-D', 'PF-F', 'PF-G']);
+});
+
+// ---------- bedsLabel (regression: "NaN BR" leak via stored '4+') ----------
+
+// The home page RSC flight data once carried `"beds":"$NaN"` for ~56 listings:
+// db.ts mapped a stored '4+' bucket through Number('4+') → NaN, and bedsLabel
+// then rendered `${NaN} BR` = "NaN BR". Lock the contract for every input shape.
+test('bedsLabel · studio', () => {
+  eq(bedsLabel('studio'), 'Studio');
+});
+
+test('bedsLabel · 4+ bucket renders "4+ BR" (never "NaN BR")', () => {
+  eq(bedsLabel('4+'), '4+ BR');
+});
+
+test('bedsLabel · numeric beds', () => {
+  eq(bedsLabel(2), '2 BR');
+});
+
+test('bedsLabel · NaN / non-finite falls back to em dash', () => {
+  eq(bedsLabel(NaN), '—');
+  eq(bedsLabel(Number('4+')), '—'); // the exact coercion that caused the bug
 });
 
 // ---------- applyFilters · area / developer ----------

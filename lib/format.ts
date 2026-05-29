@@ -25,8 +25,10 @@ export function relativeTime(iso: string, nowMs?: number): string {
   return `${diffMo}mo ago`;
 }
 
-export function bedsLabel(beds: number | 'studio'): string {
+export function bedsLabel(beds: number | 'studio' | '4+'): string {
   if (beds === 'studio') return 'Studio';
+  if (beds === '4+') return '4+ BR';
+  if (typeof beds !== 'number' || !Number.isFinite(beds)) return '—';
   return `${beds} BR`;
 }
 

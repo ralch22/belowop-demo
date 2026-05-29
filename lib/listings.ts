@@ -2,7 +2,7 @@ import raw from '@/data/listings.json';
 import { dropPct, opaqueIdFromRef } from './format';
 
 export type ListingType = 'off_plan' | 'ready';
-export type Beds = number | 'studio';
+export type Beds = number | 'studio' | '4+';
 
 export interface Listing {
   ref: string;
@@ -161,7 +161,7 @@ export function applyFilters(items: Listing[], f: Filters): Listing[] {
   if (f.beds && f.beds !== 'any') {
     r = r.filter((l) => {
       if (f.beds === 'studio') return l.beds === 'studio';
-      if (f.beds === '4+') return typeof l.beds === 'number' && l.beds >= 4;
+      if (f.beds === '4+') return l.beds === '4+' || (typeof l.beds === 'number' && l.beds >= 4);
       return String(l.beds) === f.beds;
     });
   }
