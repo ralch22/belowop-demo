@@ -113,7 +113,7 @@ export default function TermsPage() {
 
       <Section title="12. Contact">
         <p>
-          Questions about these terms: <span className="font-mono">hello@belowop.ae</span>.
+          Questions about these terms: <a className="font-mono underline hover:text-brand" href="mailto:rami@emergedigital.com">rami@emergedigital.com</a>.
         </p>
       </Section>
     </div>

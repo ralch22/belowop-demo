@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import type { Listing } from '@/lib/listings';
+import { safeProjectName } from '@/lib/op-parser';
 import {
   formatAED,
   dropPct,
@@ -14,6 +15,19 @@ import {
 } from '@/lib/format';
 import { Hammer, Key } from 'lucide-react';
 
+/**
+ * True if the listing has a parsed OP distinct from the current price (FIX-01).
+ * Defensive against null/undefined/zero/equal sentinels — keeps the renderer
+ * working regardless of which path Agent A took at the parser layer.
+ */
+function hasKnownOp(l: Listing): boolean {
+  const op = l.originalPrice as number | null | undefined;
+  if (op == null) return false;
+  if (!Number.isFinite(op) || op <= 0) return false;
+  if (op === l.currentPrice) return false;
+  return true;
+}
+
 export default function ListingCard({
   listing,
   onInquire,
@@ -23,14 +37,16 @@ export default function ListingCard({
   onInquire: (ref: string) => void;
   priority?: boolean;
 }) {
-  const delta = dropPct(listing.currentPrice, listing.originalPrice);
+  const known = hasKnownOp(listing);
+  const delta = known ? dropPct(listing.currentPrice, listing.originalPrice as number) : null;
   const src = listing.imageUrl ?? imageUrl(listing.imageId, 800);
+  const project = safeProjectName(listing.project, listing.community);
   return (
     <article
       onClick={() => onInquire(listing.ref)}
       tabIndex={0}
       role="button"
-      aria-label={`Inquire about ${listing.project} in ${listing.community}`}
+      aria-label={`Inquire about ${project ?? listing.community} in ${listing.community}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
           e.preventDefault();
@@ -42,24 +58,34 @@ export default function ListingCard({
       <div className="relative aspect-[16/9] bg-slate-200 dark:bg-slate-800">
         <Image
           src={src}
-          alt={listing.project}
+          alt={project ?? listing.community}
           fill
           sizes="(min-width: 640px) 50vw, 100vw"
           priority={priority}
           loading={priority ? undefined : 'lazy'}
           className="object-cover"
         />
-        <div className={`absolute top-2 right-2 rounded-full bg-white/95 backdrop-blur px-2 py-0.5 text-xs font-mono font-semibold tabular-nums ${dropColor(delta)} dark:bg-slate-900/90`}>
-          {delta.toFixed(1)}%
-        </div>
+        {delta !== null && (
+          <div
+            className={`absolute top-2 right-2 rounded-full bg-white/95 px-2 py-0.5 text-xs font-mono font-semibold tabular-nums backdrop-blur ${dropColor(
+              delta,
+            )} dark:bg-slate-900/90`}
+          >
+            {delta.toFixed(1)}% vs OP
+          </div>
+        )}
         <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
           {listing.type === 'off_plan' ? <Hammer size={10} /> : <Key size={10} />}
           {listing.type === 'off_plan' ? 'Off-plan' : 'Ready'}
         </div>
       </div>
       <div className="p-4">
-        <p className="line-clamp-1 font-medium text-slate-900 dark:text-slate-100">{listing.project}</p>
-        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{listing.developer}</p>
+        <p className="line-clamp-1 font-medium text-slate-900 dark:text-slate-100">
+          {project ?? '—'}
+        </p>
+        {listing.developer ? (
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{listing.developer}</p>
+        ) : null}
         <div className="mt-2 flex items-baseline justify-between gap-2">
           <p className="font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-slate-100">
             AED {formatAED(listing.currentPrice)}
@@ -69,7 +95,8 @@ export default function ListingCard({
           </p>
         </div>
         <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-          {listing.community} · {bedsLabel(listing.beds)} · {formatSqm(listing.sqft)} · {relativeTime(listing.listedAt)}
+          {listing.community} · {bedsLabel(listing.beds)} · {formatSqm(listing.sqft)} ·{' '}
+          {relativeTime(listing.listedAt)}
         </p>
       </div>
     </article>

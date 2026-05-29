@@ -10,9 +10,11 @@ import {
   type Filters,
   type Listing,
 } from '@/lib/listings';
+import { relativeTime } from '@/lib/format';
 import FilterBar from './FilterBar';
 import ListingTable from './ListingTable';
 import ListingCard from './ListingCard';
+import ActiveFilters from './ActiveFilters';
 import Pagination from './Pagination';
 import LeadModal from './LeadModal';
 import Toast from './Toast';
@@ -21,6 +23,16 @@ import { Bell } from 'lucide-react';
 
 // SRS-FR-24: paginate the public table 25 per page.
 const PAGE_SIZE = 25;
+
+// Per-key default values — used to clear a filter via the chip strip.
+const FILTER_DEFAULTS: Partial<Filters> = {
+  type: 'all',
+  beds: 'any',
+  community: undefined,
+  developer: undefined,
+  minDropPct: undefined,
+  maxPrice: undefined,
+};
 
 export default function ListingsView({
   initialListings,
@@ -35,7 +47,10 @@ export default function ListingsView({
   const [toast, setToast] = useState<string | null>(null);
 
   // Build opaque-ID lookup over whatever data we received from the server.
-  const { opaqueOf, findByOpaqueId } = useMemo(() => buildOpaqueMaps(initialListings), [initialListings]);
+  const { opaqueOf, findByOpaqueId } = useMemo(
+    () => buildOpaqueMaps(initialListings),
+    [initialListings],
+  );
 
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(search.toString())), [search]);
   const inquireParam = search.get('inquire');
@@ -44,6 +59,20 @@ export default function ListingsView({
   const filtered = useMemo(() => applyFilters(initialListings, filters), [filters, initialListings]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // FIX-12: derive freshness from MAX(listedAt) over the inbound listings.
+  // This is an interim signal until the ingestion schedule lands (path A) —
+  // see BUILD_BRIEF.md §FIX-12.
+  const lastRefreshedLabel = useMemo(() => {
+    if (initialListings.length === 0) return null;
+    let maxTs = 0;
+    for (const l of initialListings) {
+      const t = new Date(l.listedAt).getTime();
+      if (Number.isFinite(t) && t > maxTs) maxTs = t;
+    }
+    if (maxTs === 0) return null;
+    return relativeTime(new Date(maxTs).toISOString());
+  }, [initialListings]);
 
   useEffect(() => { setPage(1); }, [filters]);
 
@@ -73,17 +102,23 @@ export default function ListingsView({
   return (
     <>
       <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 dark:border-slate-800">
-        <div className="mx-auto max-w-content px-4 py-10 sm:px-6 sm:py-14">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+        {/* FIX-13: compressed hero — H1 smaller, subhead dropped. */}
+        <div className="mx-auto max-w-content px-4 py-5 sm:px-6 sm:py-6">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
             Off-market & below-OP Dubai inventory.
           </h1>
-          <p className="mt-2 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-400">
-            Curated, broker-verified units listed below Original Price. Updated daily.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> Live · {initialListings.length} units tracked</span>
-            <span className="text-slate-400">·</span>
-            <span>{dataSource === 'db' ? 'From live DB' : 'Demo data'}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              Live · {initialListings.length} units
+              {lastRefreshedLabel ? ` · refreshed ${lastRefreshedLabel}` : ''}
+            </span>
+            {dataSource === 'seed' && (
+              <>
+                <span className="text-slate-400">·</span>
+                <span>Demo data</span>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -91,11 +126,17 @@ export default function ListingsView({
       <FilterBar filters={filters} onChange={updateParams} total={initialListings.length} filtered={filtered.length} />
 
       <div className="mx-auto max-w-content px-4 py-6 sm:px-6">
+        <ActiveFilters
+          filters={filters}
+          onChange={updateParams}
+          onReset={() => updateParams(FILTER_DEFAULTS)}
+        />
+
         {filtered.length === 0 ? (
-          <EmptyState onReset={() => updateParams({ type: 'all', beds: 'any', community: undefined, developer: undefined, minDropPct: undefined, maxPrice: undefined })} />
+          <EmptyState onReset={() => updateParams(FILTER_DEFAULTS)} />
         ) : (
           <>
-            <ListingTable items={pageItems} onInquire={openInquire} />
+            <ListingTable items={pageItems} onInquire={openInquire} opaqueOf={opaqueOf} />
             <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
               {pageItems.map((l, idx) => (
                 <ListingCard key={l.ref} listing={l} onInquire={openInquire} priority={idx === 0} />

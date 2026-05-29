@@ -32,12 +32,20 @@ export default function Nav() {
               {l.label}
             </Link>
           ))}
-          <button
-            className="ml-2 inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label="Alerts"
+          <Link
+            href="/alerts"
+            className="group relative ml-2 inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:bg-slate-800"
+            aria-label="Get alerts"
+            title="Get alerts"
           >
             <Bell size={18} />
-          </button>
+            <span
+              className="pointer-events-none absolute top-full mt-1 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow transition-opacity group-hover:opacity-100 dark:bg-slate-700"
+              role="tooltip"
+            >
+              Get alerts
+            </span>
+          </Link>
           <ThemeToggle />
         </nav>
         <button

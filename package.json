@@ -13,7 +13,9 @@
     "test:format": "tsx tests/format-telegram.test.ts",
     "test:listings": "tsx tests/listings.test.ts",
     "test:hmac": "tsx tests/hmac.test.ts",
-    "check:pf": "bash scripts/check-no-pf-refs.sh"
+    "test:smoke": "bash scripts/smoke.sh",
+    "check:pf": "bash scripts/check-no-pf-refs.sh",
+    "check:placeholders": "bash scripts/check-no-placeholders.sh"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

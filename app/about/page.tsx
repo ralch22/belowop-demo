@@ -1,4 +1,8 @@
+import Link from 'next/link';
+
 export default function AboutPage() {
+  const reraReady = process.env.NEXT_PUBLIC_RERA_READY === 'true';
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl font-semibold tracking-tight">About Below OP</h1>
@@ -26,19 +30,23 @@ export default function AboutPage() {
           {' '}<a className="underline font-medium" href="https://t.me/dubaipropertydeal" target="_blank" rel="noopener noreferrer">Telegram → @DubaiPropertydeal</a>.
           The same finds also post to our WhatsApp Channel manually shortly after.
         </p>
+        <p className="mt-2">
+          <Link href="/alert-preview" className="text-sm underline text-brand hover:text-brand-hover">
+            Preview an alert →
+          </Link>
+        </p>
       </Section>
 
-      <Section title="Broker disclosure">
-        <p>
-          RERA broker registration: <span className="font-mono text-slate-500">{'<pending §7.1 — launch-blocker>'}</span>
-        </p>
-        <p>
-          Operating brokerage: <span className="font-mono text-slate-500">{'<TBD>'}</span>
-        </p>
-        <p className="text-xs text-slate-500 mt-2">
-          Public launch is gated on RERA registration being completed and disclosed here.
-        </p>
-      </Section>
+      {reraReady && (
+        <Section title="Broker disclosure">
+          <p>
+            RERA broker registration: <span className="font-mono">{process.env.NEXT_PUBLIC_RERA_NUMBER}</span>
+          </p>
+          <p>
+            Operating brokerage: <span className="font-mono">{process.env.NEXT_PUBLIC_BROKERAGE_NAME}</span>
+          </p>
+        </Section>
+      )}
 
       <Section title="Privacy">
         <p>
@@ -50,8 +58,7 @@ export default function AboutPage() {
 
       <Section title="Contact">
         <p>
-          WhatsApp: <span className="font-mono">+971 50 000 0000</span><br />
-          Email: <span className="font-mono">hello@belowop.ae</span>
+          Email: <a className="font-mono underline hover:text-brand" href="mailto:rami@emergedigital.com">rami@emergedigital.com</a>
         </p>
       </Section>
     </div>

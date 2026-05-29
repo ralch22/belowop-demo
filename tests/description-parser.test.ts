@@ -17,6 +17,8 @@ import {
   parsePlotSize,
   composeUnitType,
   extractFeatures,
+  parseBeds,
+  safeProjectName,
 } from '../lib/description-parser';
 
 // ---------- micro test framework (zero deps) ----------
@@ -68,6 +70,21 @@ test('parseOp · "Below OP by 8%"', () => {
 
 test('parseOp · returns null when nothing matches', () => {
   const r = parseOp('Beautiful spacious apartment with great view. Call now!', 1_000_000);
+  eq(r.op, null);
+  eq(r.dropPct, null);
+  eq(r.source, null);
+});
+
+test('parseOp · returns null for empty/blank description (no fabricated fallback)', () => {
+  eq(parseOp('', 2_000_000), { op: null, dropPct: null, source: null });
+  eq(parseOp(null, 2_000_000), { op: null, dropPct: null, source: null });
+  eq(parseOp(undefined, 2_000_000), { op: null, dropPct: null, source: null });
+  eq(parseOp('   \n\t  ', 2_000_000), { op: null, dropPct: null, source: null });
+});
+
+test('parseOp · returns null when description has no OP cue even with currentPrice', () => {
+  // Critical regression guard for FIX-01 — must NOT fabricate a 5% fallback.
+  const r = parseOp('Spacious 2BR apartment, marina view, ready to move in.', 2_150_000);
   eq(r.op, null);
   eq(r.dropPct, null);
 });
@@ -234,6 +251,96 @@ test('extractFeatures · caps at 8 entries', () => {
     description: '',
   });
   eq(r.length, 8);
+});
+
+// ---------- parseBeds (FIX-02) ----------
+
+test('parseBeds · null input → null (never "NaN")', () => {
+  eq(parseBeds(null), null);
+  eq(parseBeds(undefined), null);
+});
+
+test('parseBeds · blank string → null', () => {
+  eq(parseBeds(''), null);
+  eq(parseBeds('   '), null);
+});
+
+test('parseBeds · non-numeric junk → null (never "NaN")', () => {
+  eq(parseBeds('not a number'), null);
+  eq(parseBeds('abc'), null);
+  eq(parseBeds('-'), null);
+});
+
+test('parseBeds · literal "NaN" string → null', () => {
+  eq(parseBeds('NaN'), null);
+  eq(parseBeds('nan'), null);
+});
+
+test('parseBeds · literal "null"/"undefined" strings → null', () => {
+  eq(parseBeds('null'), null);
+  eq(parseBeds('undefined'), null);
+});
+
+test('parseBeds · "studio" / "Studio Apartment"', () => {
+  eq(parseBeds('studio'), 'studio');
+  eq(parseBeds('Studio Apartment'), 'studio');
+  eq(parseBeds('0'), 'studio');
+});
+
+test('parseBeds · numeric coercion 1-3', () => {
+  eq(parseBeds(1), '1');
+  eq(parseBeds('1'), '1');
+  eq(parseBeds('2 BR'), '2');
+  eq(parseBeds('3 Bedroom'), '3');
+});
+
+test('parseBeds · 4+ collapses 4,5,6,...', () => {
+  eq(parseBeds(4), '4+');
+  eq(parseBeds('5'), '4+');
+  eq(parseBeds('7 bedroom villa'), '4+');
+});
+
+test('parseBeds · non-finite number input → null', () => {
+  eq(parseBeds(Number.NaN), null);
+  eq(parseBeds(Number.POSITIVE_INFINITY), null);
+  eq(parseBeds(Number.NEGATIVE_INFINITY), null);
+});
+
+// ---------- safeProjectName (FIX-03) ----------
+
+test('safeProjectName · candidate === community → null', () => {
+  eq(safeProjectName('Terra Heights', 'Terra Heights'), null);
+});
+
+test('safeProjectName · case-insensitive match → null', () => {
+  eq(safeProjectName('TERRA HEIGHTS', 'terra heights'), null);
+  eq(safeProjectName('Damac Lagoons', 'DAMAC LAGOONS'), null);
+});
+
+test('safeProjectName · whitespace trim still matches → null', () => {
+  eq(safeProjectName('  Maritime City  ', 'Maritime City'), null);
+});
+
+test('safeProjectName · distinct values pass through', () => {
+  eq(safeProjectName('Seapoint', 'Dubai Harbour'), 'Seapoint');
+  eq(safeProjectName('Marina Views', 'Dubai Marina'), 'Marina Views');
+});
+
+test('safeProjectName · null/undefined/blank candidate → null', () => {
+  eq(safeProjectName(null, 'Dubai Marina'), null);
+  eq(safeProjectName(undefined, 'Dubai Marina'), null);
+  eq(safeProjectName('', 'Dubai Marina'), null);
+  eq(safeProjectName('   ', 'Dubai Marina'), null);
+});
+
+test('safeProjectName · trims candidate before returning', () => {
+  eq(safeProjectName('  Sobha Hartland II  ', 'Mohammed Bin Rashid City'), 'Sobha Hartland II');
+});
+
+test('safeProjectName · candidate with null/blank community returns candidate', () => {
+  eq(safeProjectName('Oceanz by Danube', null), 'Oceanz by Danube');
+  eq(safeProjectName('Oceanz by Danube', ''), 'Oceanz by Danube');
+  eq(safeProjectName('Oceanz by Danube', undefined), 'Oceanz by Danube');
 });
 
 // ---------- runner ----------

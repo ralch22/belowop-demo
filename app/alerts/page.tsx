@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { allCommunities } from '@/lib/listings';
 import clsx from 'clsx';
@@ -124,6 +125,14 @@ export default function AlertsPage() {
           <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
             Want the alerts filtered to specific areas, bed counts, or drop %? Use the form below for a personalised feed.
           </p>
+          <div className="mt-4">
+            <Link
+              href="/alert-preview"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:text-slate-200 dark:hover:border-brand-dark dark:hover:text-brand-dark"
+            >
+              Preview an alert <span aria-hidden>→</span>
+            </Link>
+          </div>
         </section>
       )}
 

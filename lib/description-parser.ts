@@ -10,7 +10,33 @@
  * a wrong value.
  */
 
-export { parseOp, type ParsedOp } from './op-parser';
+export { parseOp, type ParsedOp, safeProjectName } from './op-parser';
+
+// ---------- Bedrooms ----------
+
+/**
+ * Parse a bedroom-count input into one of the canonical strings used
+ * throughout the system: 'studio' | '1' | '2' | '3' | '4+' | null.
+ *
+ * Accepts strings, numbers, null, undefined, and free-text like "2 BR",
+ * "Studio", "two bed", or "" — and crucially refuses to ever return the
+ * literal string "NaN". Non-finite inputs collapse to null at the
+ * parser boundary so they never reach the DB (FIX-02).
+ */
+export function parseBeds(input: string | number | null | undefined): string | null {
+  if (input === null || input === undefined) return null;
+  const raw = String(input).toLowerCase().trim();
+  if (!raw || raw === 'nan' || raw === 'null' || raw === 'undefined') return null;
+  if (raw === '0' || raw.includes('studio')) return 'studio';
+  // Pull the first numeric run.
+  const match = raw.match(/-?\d+/);
+  if (!match) return null;
+  const n = parseInt(match[0], 10);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n === 0) return 'studio';
+  if (n >= 4) return '4+';
+  return String(n);
+}
 
 // ---------- Handover (off-plan completion) ----------
 
@@ -27,6 +53,7 @@ export function parseHandover(desc: string | null | undefined): string | null {
   const yMatch = /\b(?:handover|completion|ready by)\s*[:\-–]?\s*(\d{4})\b/i.exec(desc);
   if (yMatch) {
     const y = parseInt(yMatch[1], 10);
+    if (!Number.isFinite(y)) return null;
     const now = new Date().getFullYear();
     if (y >= now - 1 && y <= now + 10) return String(y);
   }
@@ -119,7 +146,7 @@ export function parsePaymentStatus(desc: string | null | undefined): string | nu
 
 function parseSqftWithUnit(value: string, unit: string | undefined): number | null {
   const n = parseFloat(value.replace(/[\s,]/g, ''));
-  if (!isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) return null;
   const u = (unit || 'sqft').toLowerCase();
   if (u.includes('sqm') || u === 'm' || u.includes('m2') || u.includes('m²')) return Math.round(n / 0.092903);
   return Math.round(n);

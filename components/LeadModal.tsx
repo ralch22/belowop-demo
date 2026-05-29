@@ -23,6 +23,12 @@ export default function LeadModal({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Per FIX-04: validation hints only appear after the user has tried to
+  // submit at least once. Field-level red borders are wired separately on
+  // blur of empty required fields.
+  const [submitted, setSubmitted] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -91,6 +97,7 @@ export default function LeadModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     if (!name || !phone || !consent) return;
     setSubmitting(true);
     setErrorMsg(null);
@@ -122,7 +129,37 @@ export default function LeadModal({
   }
 
   const delta = dropPct(listing.currentPrice, listing.originalPrice);
-  const thumbSrc = listing.imageUrl ?? imageUrl(listing.imageId, 200);
+  // FIX-05: `??` only triggers on null/undefined — DB-sourced rows have
+  // imageUrl='' (empty string), which would fall through to a broken
+  // Unsplash URL built from an empty imageId. Use a truthy check and bail
+  // out to a CSS-only grey box when neither source is usable.
+  const thumbSrc = listing.imageUrl || (listing.imageId ? imageUrl(listing.imageId, 200) : '');
+
+  // FIX-06: header concatenates project + subLocation, but upstream sometimes
+  // passes the community as subLocation when they're identical (e.g. "Terra
+  // Heights, Terra Heights"). Dedupe case-insensitively. Same logic guards
+  // developer/community echoes on the secondary meta line.
+  const project = listing.project ?? '';
+  const sub = listing.subLocation ?? '';
+  const heading =
+    sub && sub.trim().toLowerCase() !== project.trim().toLowerCase()
+      ? `${project}, ${sub}`
+      : project;
+  const community = listing.community ?? '';
+  const developer = listing.developer ?? '';
+  const metaParts = [
+    developer,
+    community && community.trim().toLowerCase() !== developer.trim().toLowerCase()
+      ? community
+      : '',
+  ].filter(Boolean);
+  const metaLine = metaParts.join(' · ');
+
+  // Field-level error states (FIX-04): red border once a required field has
+  // been touched while empty, OR after a submit attempt with that field empty.
+  const nameError = (nameTouched || submitted) && !name;
+  const phoneError = (phoneTouched || submitted) && !phone;
+  const showErrorHint = submitted && (!name || !phone || !consent) && !submitting;
 
   return (
     <div
@@ -155,18 +192,25 @@ export default function LeadModal({
             <h3 id="lead-title" className="text-lg font-semibold pr-8">Get details on this unit</h3>
 
             <div className="mt-4 flex gap-3 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700">
-                <Image
-                  src={thumbSrc}
-                  alt={listing.project}
-                  fill
-                  sizes="56px"
-                  className="object-cover"
-                />
+              <div
+                className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700"
+                aria-hidden={thumbSrc ? undefined : true}
+              >
+                {thumbSrc ? (
+                  <Image
+                    src={thumbSrc}
+                    alt={listing.project}
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                  />
+                ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{listing.project}{listing.subLocation ? `, ${listing.subLocation}` : ''}</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">{listing.developer} · {listing.community}</p>
+                <p className="truncate text-sm font-medium">{heading}</p>
+                {metaLine && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{metaLine}</p>
+                )}
                 <p className="text-xs text-slate-600 dark:text-slate-400">
                   {listing.unitType ?? bedsLabel(listing.beds)}{listing.bathrooms ? ` · ${listing.bathrooms} Bath` : ''} · {formatSqm(listing.sqft)}
                 </p>
@@ -195,8 +239,14 @@ export default function LeadModal({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setNameTouched(true)}
                   autoComplete="name"
-                  className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
+                  aria-invalid={nameError || undefined}
+                  className={`block w-full rounded-md border bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-800 ${
+                    nameError
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-slate-300 dark:border-slate-700'
+                  }`}
                   placeholder="Sara A."
                 />
               </Field>
@@ -210,7 +260,13 @@ export default function LeadModal({
                     inputMode="numeric"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="block w-full rounded-r-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
+                    onBlur={() => setPhoneTouched(true)}
+                    aria-invalid={phoneError || undefined}
+                    className={`block w-full rounded-r-md border bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-800 ${
+                      phoneError
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-slate-300 dark:border-slate-700'
+                    }`}
                     placeholder="50 123 4567"
                   />
                 </div>
@@ -249,7 +305,7 @@ export default function LeadModal({
               >
                 {submitting ? 'Sending…' : 'Request details'}
               </button>
-              {(!name || !phone || !consent) && !submitting && (
+              {showErrorHint && (
                 <p
                   aria-live="polite"
                   className="text-center text-[11px] text-amber-700 dark:text-amber-400"

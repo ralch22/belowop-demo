@@ -210,7 +210,7 @@ export async function upsertScrapedListing(input: {
   beds: string;
   sqft: number;
   currentPrice: number;
-  originalPrice: number;
+  originalPrice: number | null;
   sourceImageUrls: string[];
   listedAt: string;
   raw: unknown;
@@ -291,7 +291,7 @@ export async function upsertScrapedListing(input: {
         ${isNew ? 'new_listing' : 'price_drop'},
         ${previousPrice},
         ${input.currentPrice},
-        ${((input.currentPrice - input.originalPrice) / input.originalPrice) * 100}
+        ${input.originalPrice ? ((input.currentPrice - input.originalPrice) / input.originalPrice) * 100 : null}
       );
     `;
   }

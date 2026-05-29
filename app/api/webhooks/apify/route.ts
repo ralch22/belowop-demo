@@ -36,6 +36,7 @@ import {
 } from '@/lib/db';
 import {
   parseOp,
+  parseBeds,
   parseHandover,
   parseView,
   parseFloor,
@@ -193,12 +194,10 @@ function normaliseShahidirfan(s: ShahidirfanItem): AzzouzanaItem {
 // ---------------------------------------------------------------------------
 
 function mapBeds(item: AzzouzanaItem): string {
-  const raw = (item.bedrooms ?? item.bedrooms_value ?? '').toString().toLowerCase();
-  if (!raw || raw === '0' || raw.includes('studio')) return 'studio';
-  const n = parseInt(raw.replace(/[^0-9]/g, ''), 10);
-  if (!isFinite(n)) return '1';
-  if (n >= 4) return '4+';
-  return String(n);
+  // Delegate to the hardened parser (returns 'studio' | '1' | '2' | '3' | '4+' | null,
+  // never the string "NaN" — FIX-02). Fall back to 'studio' when unparseable rather
+  // than fabricating a 1-bed.
+  return parseBeds(item.bedrooms ?? item.bedrooms_value) ?? 'studio';
 }
 
 function mapSqft(item: AzzouzanaItem): number {
@@ -406,7 +405,7 @@ export async function POST(req: Request) {
       // ("BELOW OP" tags often live in the title, OP values often in description).
       const desc = [item.title, item.description].filter(Boolean).join('\n\n') || null;
       const opParse = parseOp(desc, currentPrice);
-      const originalPrice = opParse.op ?? Math.round(currentPrice * 1.05); // fallback: 5% baseline
+      const originalPrice = opParse.op; // null when not parsed — never fabricate (FIX-01)
       if (opParse.op !== null) stats.opParsed++;
 
       const beds = mapBeds(item);

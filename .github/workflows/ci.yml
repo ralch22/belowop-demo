@@ -34,3 +34,9 @@ jobs:
 
       - name: Guardrail — no PropertyFinder on public surface
         run: bash scripts/check-no-pf-refs.sh
+
+      - name: Guardrail — no placeholders / NaN / fake contacts on public surface
+        run: bash scripts/check-no-placeholders.sh
+
+      - name: Smoke test — public routes contain no forbidden strings
+        run: npm run test:smoke

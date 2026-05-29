@@ -57,7 +57,7 @@ function parseAmount(raw: string, suffix?: string): number | null {
   let n: number;
   if (dots > 1) n = parseInt(cleaned.replace(/\./g, ''), 10);
   else n = parseFloat(cleaned);
-  if (!isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) return null;
   const s = (suffix || '').toLowerCase();
   if (s === 'k') n *= 1_000;
   else if (s === 'm' || s === 'mn' || s === 'million') n *= 1_000_000;
@@ -93,7 +93,7 @@ export function parseOp(description: string | null | undefined, currentPrice?: n
     const m = regex.exec(description);
     if (m) {
       const pct = parseFloat(m[1]);
-      if (isFinite(pct) && pct > 0 && pct < 60) {
+      if (Number.isFinite(pct) && pct > 0 && pct < 60) {
         const op = currentPrice ? Math.round(currentPrice / (1 - pct / 100)) : null;
         return { op, dropPct: pct, source: name };
       }
@@ -101,4 +101,26 @@ export function parseOp(description: string | null | undefined, currentPrice?: n
   }
 
   return { op: null, dropPct: null, source: null };
+}
+
+/**
+ * Returns the candidate project name only if it is meaningfully distinct
+ * from the community. Trims and compares case-insensitively. When the
+ * candidate is empty, null, or equal (after normalisation) to the
+ * community, returns null so the render layer can fall back to `—`
+ * rather than duplicating the area name in the project column.
+ *
+ * Consumed by the render layer (Agent C) and the lead-modal title (FIX-06).
+ * See FIX-03 in BUILD_BRIEF.md.
+ */
+export function safeProjectName(
+  candidate: string | null | undefined,
+  community: string | null | undefined,
+): string | null {
+  if (candidate == null) return null;
+  const c = String(candidate).trim();
+  if (!c) return null;
+  const co = (community ?? '').toString().trim();
+  if (co && c.toLowerCase() === co.toLowerCase()) return null;
+  return c;
 }
