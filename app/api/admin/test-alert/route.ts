@@ -16,7 +16,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { formatWhatsapp, formatTelegram, type AlertContext } from '@/lib/alert-format';
 import { sendTelegram } from '@/lib/telegram';
 import { sendWhatsapp } from '@/lib/twilio';
-import { dropPct } from '@/lib/format';
+import { dropPct, opaqueIdFromRef } from '@/lib/format';
+import { shortenListing, listingDestination } from '@/lib/dub';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,11 @@ export async function POST(req: Request) {
   if (!l) return NextResponse.json({ ok: false, error: 'listing not found' }, { status: 404 });
 
   const webUrl = process.env.PUBLIC_WEB_URL ?? 'https://belowop-demo.vercel.app';
+  // Real-send path: mint a trackable Dub short link for the deal CTA, falling
+  // back to the long opaque deep link if Dub is unconfigured / errors.
+  const opaqueId = opaqueIdFromRef(l.external_ref);
+  const deepLink = listingDestination(webUrl, opaqueId);
+  const dealLink = (await shortenListing({ webBase: webUrl, opaqueId, title: l.project })) ?? deepLink;
   const ctx: AlertContext = {
     project: l.project,
     community: l.community,
@@ -87,7 +93,7 @@ export async function POST(req: Request) {
     current: Number(l.current_price),
     original: Number(l.original_price),
     dropPct: dropPct(Number(l.current_price), Number(l.original_price)),
-    webUrl,
+    webUrl: dealLink,
   };
 
   const tg = formatTelegram(ctx);

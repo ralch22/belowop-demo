@@ -12,7 +12,8 @@ import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { timingSafeEqual } from 'node:crypto';
 import { formatWhatsapp, type AlertContext } from '@/lib/alert-format';
-import { dropPct } from '@/lib/format';
+import { dropPct, opaqueIdFromRef } from '@/lib/format';
+import { shortenListing, listingDestination } from '@/lib/dub';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,12 @@ export async function GET(req: Request) {
     rows = r.rows;
   }
 
-  const items = rows.map((l) => {
+  const items = await Promise.all(rows.map(async (l) => {
+    // Mint a trackable Dub short link for the deal CTA, falling back to the
+    // long opaque deep link when Dub is unconfigured / errors.
+    const opaqueId = opaqueIdFromRef(l.external_ref);
+    const deepLink = listingDestination(webBase, opaqueId);
+    const dealLink = (await shortenListing({ webBase, opaqueId, title: l.project })) ?? deepLink;
     const ctx: AlertContext = {
       project: l.project,
       community: l.community,
@@ -107,7 +113,7 @@ export async function GET(req: Request) {
       current: Number(l.current_price),
       original: Number(l.original_price),
       dropPct: dropPct(Number(l.current_price), Number(l.original_price)),
-      webUrl: webBase,
+      webUrl: dealLink,
     };
     // WhatsApp caption: same broker-canonical template, but Telegram-style
     // bold/strike markers (`*text*`) render naturally in WhatsApp too.
@@ -125,7 +131,7 @@ export async function GET(req: Request) {
       alertEventId: l.alert_event_id ?? null,
       alertCreatedAt: l.alert_created_at ?? null,
     };
-  });
+  }));
 
   return NextResponse.json({ ok: true, channel_url: channelUrl, source, count: items.length, items });
 }

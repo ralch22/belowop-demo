@@ -129,6 +129,8 @@ export function formatWhatsapp(ctx: AlertContext): string {
   if (hasDiscount(ctx)) lines.push(`~Original Price: ${formatAedShort(ctx.original)} Ð~`);
   lines.push(`*Selling Price*: *${formatAedShort(ctx.current)} Ð* | ${formatUsdShort(ctx.current)} 🔥`);
   lines.push('');
+  lines.push(`🔗 *View this deal*: ${ctx.webUrl}`);
+  lines.push('');
   lines.push(`For serious inquiries contact:`);
   lines.push(`Wa.me/+${brokerWhatsappNumber()}`);
   lines.push('');
@@ -163,6 +165,8 @@ export function formatTelegram(ctx: AlertContext): string {
   lines.push('');
   if (hasDiscount(ctx)) lines.push(`~${e(`Original Price: ${formatAedShort(ctx.original)} Ð`)}~`);
   lines.push(`*Selling Price*: *${e(`${formatAedShort(ctx.current)} Ð`)}* \\| ${e(formatUsdShort(ctx.current))} 🔥`);
+  lines.push('');
+  lines.push(`🔗 *View this deal*: [${e('Open listing')}](${ctx.webUrl})`);
   lines.push('');
   lines.push(`For serious inquiries contact:`);
   lines.push(`[${e(`Wa.me/+${brokerWhatsappNumber()}`)}](https://wa.me/${brokerWhatsappNumber()})`);

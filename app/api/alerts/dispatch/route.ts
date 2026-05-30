@@ -17,6 +17,8 @@ import { sendWhatsapp } from '@/lib/twilio';
 import { sendTelegram } from '@/lib/telegram';
 import { rateLimit } from '@/lib/kv';
 import { formatWhatsapp, formatTelegram, type AlertContext } from '@/lib/alert-format';
+import { shortenListing, listingDestination } from '@/lib/dub';
+import { opaqueIdFromRef } from '@/lib/format';
 import { timingSafeEqual } from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
@@ -129,6 +131,13 @@ export async function GET(req: Request) {
         continue;
       }
 
+      // Per-listing deep link uses the OPAQUE id only — never the raw ref.
+      // Mint a trackable Dub short link for it; on any failure / unconfigured
+      // Dub, fall back to the long deep link so the alert is never blocked.
+      const opaqueId = opaqueIdFromRef(l.external_ref);
+      const deepLink = listingDestination(webBase, opaqueId);
+      const shortLink = await shortenListing({ webBase, opaqueId, title: l.project });
+
       const ctx: AlertContext = {
         project: l.project,
         community: l.community,
@@ -149,7 +158,7 @@ export async function GET(req: Request) {
         current: Number(event.new_price),
         original: Number(l.original_price),
         dropPct: Number(event.drop_pct ?? 0),
-        webUrl: webBase,
+        webUrl: shortLink ?? deepLink,
       };
 
       const wa = formatWhatsapp(ctx);

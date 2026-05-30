@@ -4,7 +4,8 @@ import { sql } from '@/lib/db';
 import { isAdmin } from '@/lib/admin-auth';
 import { isDbConfigured } from '@/lib/db';
 import { formatWhatsapp, formatTelegram, brokerWhatsappNumber, type AlertContext } from '@/lib/alert-format';
-import { dropPct, formatAED, imageUrl } from '@/lib/format';
+import { dropPct, formatAED, imageUrl, opaqueIdFromRef } from '@/lib/format';
+import { listingDestination } from '@/lib/dub';
 import { listings as seedListings } from '@/lib/listings';
 
 export const dynamic = 'force-dynamic';
@@ -71,7 +72,8 @@ function buildCtx(l: ListingRow, webUrl: string): AlertContext {
     current: Number(l.current_price),
     original: Number(l.original_price),
     dropPct: delta,
-    webUrl,
+    // Server-render preview: long opaque deep link (no Dub minting here).
+    webUrl: listingDestination(webUrl, opaqueIdFromRef(l.external_ref)),
   };
 }
 

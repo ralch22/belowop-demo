@@ -10,6 +10,8 @@ import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { timingSafeEqual } from 'node:crypto';
 import { formatWhatsapp, formatTelegram, brokerWhatsappNumber, type AlertContext } from '@/lib/alert-format';
+import { listingDestination } from '@/lib/dub';
+import { opaqueIdFromRef } from '@/lib/format';
 import { isDbConfigured } from '@/lib/db';
 import { dropPct } from '@/lib/format';
 
@@ -85,7 +87,9 @@ export async function GET(req: Request) {
     current: Number(l.current_price),
     original: Number(l.original_price),
     dropPct: delta,
-    webUrl,
+    // Preview uses the long opaque deep link (no Dub minting on a QA path) so
+    // the rendered message matches what a real send would fall back to.
+    webUrl: listingDestination(webUrl, opaqueIdFromRef(l.external_ref)),
   };
 
   return NextResponse.json({
