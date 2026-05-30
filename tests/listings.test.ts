@@ -19,6 +19,7 @@ import {
   filtersFromParams,
   paramsFromFilters,
   buildEnquiryText,
+  toPublicListing,
   type Filters,
   type Listing,
 } from '../lib/listings';
@@ -479,6 +480,69 @@ test('buildEnquiryText · includes a formatted AED price', () => {
   const text = buildEnquiryText(l);
   // formatAED uses thousands separators (en-AE → "1,234,567").
   eq(text.includes('1,234,567'), true, 'price should be thousands-formatted');
+});
+
+// ---------- toPublicListing (privacy: opaque id + proxied image URLs) ----------
+//
+// The browser must never receive the raw PF ref — not as `.ref`, and not buried
+// in an image URL. The real Blob / source-CDN URLs encode the ref in their
+// path/host, so toPublicListing rewrites every image field to the same-origin
+// opaque proxy (`/img/{opaqueId}/{i}`) that resolves back to the real URL
+// server-side. This is the single server→client chokepoint.
+
+const JSON_OF = (x: unknown) => JSON.stringify(x);
+
+test('toPublicListing · strips ref and stamps the opaque id', () => {
+  const l = mk({ ref: 'PF-44021' });
+  const pub = toPublicListing(l);
+  eq(pub.opaqueId, opaqueIdFromRef('PF-44021'));
+  // `ref` must not exist on the public object at all.
+  eq('ref' in pub, false, 'public listing must not carry ref');
+});
+
+test('toPublicListing · no PF-#### token anywhere in the serialized public object', () => {
+  const l = mk({
+    ref: 'PF-44021',
+    imageUrls: [
+      'https://wzn4byw4tfl22gbj.public.blob.vercel-storage.com/listings/PF-44021/0.webp',
+      'https://static.shared.propertyfinder.ae/p/x/PF-44021-1.jpg',
+    ],
+    imageUrl: 'https://wzn4byw4tfl22gbj.public.blob.vercel-storage.com/listings/PF-44021/0.webp',
+  });
+  const pub = toPublicListing(l);
+  eq(/PF-\d+/.test(JSON_OF(pub)), false, 'no raw PF ref may survive into the public payload');
+  eq(/propertyfinder/i.test(JSON_OF(pub)), false, 'no source-CDN host may survive either');
+});
+
+test('toPublicListing · rewrites a real gallery to indexed opaque proxy paths', () => {
+  const opaque = opaqueIdFromRef('PF-44021');
+  const l = mk({
+    ref: 'PF-44021',
+    imageUrls: ['https://blob.example/listings/PF-44021/0.webp', 'https://blob.example/listings/PF-44021/1.webp'],
+    imageUrl: 'https://blob.example/listings/PF-44021/0.webp',
+  });
+  const pub = toPublicListing(l);
+  eq(pub.imageUrls, [`/img/${opaque}/0`, `/img/${opaque}/1`]);
+  eq(pub.imageUrl, `/img/${opaque}/0`);
+  eq(pub.imageId, '', 'Unsplash fallback id is cleared once a proxied gallery exists');
+});
+
+test('toPublicListing · single imageUrl (no gallery array) still gets proxied at index 0', () => {
+  const opaque = opaqueIdFromRef('PF-9');
+  const l = mk({ ref: 'PF-9', imageUrl: 'https://blob.example/listings/PF-9/0.webp' });
+  const pub = toPublicListing(l);
+  eq(pub.imageUrl, `/img/${opaque}/0`);
+  eq(pub.imageUrls, [`/img/${opaque}/0`]);
+});
+
+test('toPublicListing · seed-only listing (Unsplash imageId, no real URLs) is left untouched', () => {
+  // Seed listings carry no ref-bearing URL — just an Unsplash photo id — so
+  // there is nothing to hide; leave the cheap direct path in place.
+  const l = mk({ ref: 'PF-SEED', imageId: 'abc123', imageUrl: undefined, imageUrls: undefined });
+  const pub = toPublicListing(l);
+  eq(pub.imageId, 'abc123');
+  eq(pub.imageUrl, undefined);
+  eq(pub.imageUrls, undefined);
 });
 
 // ---------- pickImageUrls (gallery merge: blob preferred, source fallback) ----------
