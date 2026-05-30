@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { PublicListing } from '@/lib/listings';
 import { safeProjectName } from '@/lib/op-parser';
 import {
@@ -37,6 +38,7 @@ export default function ListingCard({
   onInquire: (opaqueId: string) => void;
   priority?: boolean;
 }) {
+  const t = useTranslations('card');
   const known = hasKnownOp(listing);
   const delta = known ? dropPct(listing.currentPrice, listing.originalPrice as number) : null;
   const src = listing.imageUrl ?? imageUrl(listing.imageId, 800);
@@ -48,7 +50,7 @@ export default function ListingCard({
       onClick={() => onInquire(listing.opaqueId)}
       tabIndex={0}
       role="button"
-      aria-label={`Inquire about ${project ?? listing.community} in ${listing.community}`}
+      aria-label={t('inquireAbout', { project: project ?? listing.community, community: listing.community })}
       onKeyDown={(e) => {
         // Only the card itself should open the modal on Enter/Space. The
         // carousel's arrow/dot buttons live inside the card; when one of them
@@ -76,12 +78,12 @@ export default function ListingCard({
                   delta,
                 )} dark:bg-slate-900/90`}
               >
-                {delta.toFixed(1)}% vs OP
+                {t('vsOp', { pct: delta.toFixed(1) })}
               </div>
             )}
             <div className="pointer-events-none absolute top-2 start-2 z-10 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
               {listing.type === 'off_plan' ? <Hammer size={10} /> : <Key size={10} />}
-              {listing.type === 'off_plan' ? 'Off-plan' : 'Ready'}
+              {listing.type === 'off_plan' ? t('offPlan') : t('ready')}
             </div>
           </>
         }

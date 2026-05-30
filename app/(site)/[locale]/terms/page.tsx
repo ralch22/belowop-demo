@@ -1,13 +1,27 @@
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+
 export const metadata = {
   title: 'Terms of Use · Below OP',
   description: 'Terms governing your use of the Below OP property-marketing site.',
 };
 
-export default function TermsPage() {
+export default async function TermsPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  // English-only legal page (EN is the governing version); show a localized
+  // governing-language notice for non-English readers.
+  setRequestLocale(locale);
+  const tl = await getTranslations('legal');
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Terms of Use</h1>
       <p className="mt-2 text-xs text-slate-500">Last updated: 2026-05-22</p>
+
+      <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+        {tl('governingNotice')}
+      </p>
 
       <Section title="1. About this site">
         <p>

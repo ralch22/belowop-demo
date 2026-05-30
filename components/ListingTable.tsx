@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useRouter, Link } from '@/i18n/navigation';
 import { ArrowUp, ArrowDown, Hammer, Key } from 'lucide-react';
 import type { PublicListing, Filters } from '@/lib/listings';
 import { safeProjectName } from '@/lib/op-parser';
@@ -66,6 +67,7 @@ export default function ListingTable({
   items: PublicListing[];
   onInquire: (opaqueId: string) => void;
 }) {
+  const t = useTranslations('table');
   const router = useRouter();
   const search = useSearchParams();
 
@@ -116,37 +118,37 @@ export default function ListingTable({
           <tr>
             <th className="w-16 px-4 py-3"></th>
             <SortableHeader
-              label="Project"
+              label={t('project')}
               sortKey="project"
               state={headerSortState('project')}
               onClick={onHeaderClick}
               sortable={false}
             />
             <SortableHeader
-              label="Area"
+              label={t('area')}
               sortKey="area"
               state={headerSortState('area')}
               onClick={onHeaderClick}
               sortable={false}
             />
-            <th className="px-4 py-3 text-center">Beds</th>
-            <th className="px-4 py-3 text-end">Size</th>
+            <th className="px-4 py-3 text-center">{t('beds')}</th>
+            <th className="px-4 py-3 text-end">{t('size')}</th>
             <SortableHeader
-              label="Price (AED)"
+              label={t('priceAed')}
               sortKey="price"
               state={headerSortState('price')}
               onClick={onHeaderClick}
               align="right"
             />
             <SortableHeader
-              label="AED / m²"
+              label={t('perSqm')}
               sortKey="ppsqm"
               state={headerSortState('ppsqm')}
               onClick={onHeaderClick}
               align="right"
             />
             <SortableHeader
-              label="Age"
+              label={t('age')}
               sortKey="age"
               state={headerSortState('age')}
               onClick={onHeaderClick}
@@ -180,7 +182,7 @@ export default function ListingTable({
                 key={l.opaqueId}
                 tabIndex={0}
                 role="button"
-                aria-label={`Inquire about ${project ?? l.community} in ${l.community}`}
+                aria-label={t('inquireAbout', { project: project ?? l.community, community: l.community })}
                 onClick={onRowClick}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
@@ -224,9 +226,9 @@ export default function ListingTable({
                   <CellLink href={href}>
                     <div className="flex items-center gap-2">
                       {l.type === 'off_plan' ? (
-                        <Hammer size={12} className="text-slate-500" aria-label="Off-plan" />
+                        <Hammer size={12} className="text-slate-500" aria-label={t('offPlan')} />
                       ) : (
-                        <Key size={12} className="text-slate-500" aria-label="Ready" />
+                        <Key size={12} className="text-slate-500" aria-label={t('ready')} />
                       )}
                       <span className="font-medium text-slate-900 dark:text-slate-100">
                         {project ?? '—'}
@@ -257,7 +259,7 @@ export default function ListingTable({
                           delta,
                         )}`}
                       >
-                        {delta.toFixed(1)}% vs OP
+                        {t('vsOp', { pct: delta.toFixed(1) })}
                       </div>
                     )}
                   </CellLink>
@@ -318,6 +320,7 @@ function SortableHeader({
   align?: 'right' | 'left' | 'center';
   sortable?: boolean;
 }) {
+  const t = useTranslations('table');
   const cls = align === 'right' ? 'px-4 py-3 text-end' : 'px-4 py-3';
   if (!sortable) {
     return <th className={cls}>{label}</th>;
@@ -328,7 +331,7 @@ function SortableHeader({
         type="button"
         role="button"
         tabIndex={0}
-        aria-label={`Sort by ${label}`}
+        aria-label={t('sortBy', { label })}
         aria-sort={state.active ? (state.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
         onClick={() => onClick(sortKey)}
         onKeyDown={(e) => {

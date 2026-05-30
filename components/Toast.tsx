@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function Toast({
@@ -12,6 +13,7 @@ export default function Toast({
   onClose: () => void;
   variant?: 'success' | 'info' | 'error';
 }) {
+  const t = useTranslations('toast');
   useEffect(() => {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
@@ -34,7 +36,7 @@ export default function Toast({
     >
       <Icon className={`mt-0.5 shrink-0 ${iconColor}`} size={18} />
       <p className="text-sm text-slate-800 dark:text-slate-100 flex-1">{message}</p>
-      <button onClick={onClose} aria-label="Dismiss" className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+      <button onClick={onClose} aria-label={t('dismiss')} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
         <X size={16} />
       </button>
     </div>

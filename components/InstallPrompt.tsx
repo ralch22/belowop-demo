@@ -11,7 +11,8 @@
  *    an iOS-specific instructional variant instead.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { usePathname } from '@/i18n/navigation';
 import { X, Download } from 'lucide-react';
 
 const VISIT_KEY = 'belowop-visit-count';
@@ -66,6 +67,7 @@ function wasRecentlyDismissed(): boolean {
 }
 
 export default function InstallPrompt() {
+  const t = useTranslations('installPrompt');
   const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
@@ -145,21 +147,21 @@ export default function InstallPrompt() {
         </div>
         <div className="min-w-0 flex-1">
           <p id="install-prompt-title" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Install Below OP
+            {t('title')}
           </p>
           {iosMode ? (
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-              Tap the Share icon, then choose <span className="font-medium">&ldquo;Add to Home Screen&rdquo;</span> to install.
+              {t('iosBody')}
             </p>
           ) : (
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-              Get instant access from your home screen, with offline support.
+              {t('body')}
             </p>
           )}
         </div>
         <button
           onClick={dismiss}
-          aria-label="Dismiss install prompt"
+          aria-label={t('dismiss')}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:hover:bg-slate-800"
         >
           <X size={16} />
@@ -170,13 +172,13 @@ export default function InstallPrompt() {
           onClick={dismiss}
           className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
-          Not now
+          {t('notNow')}
         </button>
         <button
           onClick={accept}
           className="flex-1 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
         >
-          {iosMode ? 'Got it' : 'Install'}
+          {iosMode ? t('gotIt') : t('install')}
         </button>
       </div>
     </div>

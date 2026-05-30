@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import clsx from 'clsx';
 
 export default function Pagination({
@@ -12,17 +13,23 @@ export default function Pagination({
   totalPages: number;
   onChange: (p: number) => void;
 }) {
+  const t = useTranslations('pagination');
+  // Mirror the prev/next chevron glyphs under RTL (positions already flip via
+  // flex direction in an rtl container).
+  const rtl = useLocale() === 'ar';
+  const PrevIcon = rtl ? ChevronRight : ChevronLeft;
+  const NextIcon = rtl ? ChevronLeft : ChevronRight;
   if (totalPages <= 1) return null;
   const pages = pageNumbers(page, totalPages);
   return (
-    <nav className="mt-8 flex items-center justify-center gap-1" aria-label="Pagination">
+    <nav className="mt-8 flex items-center justify-center gap-1" aria-label={t('label')}>
       <button
         onClick={() => onChange(Math.max(1, page - 1))}
         disabled={page === 1}
         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
-        aria-label="Previous page"
+        aria-label={t('previous')}
       >
-        <ChevronLeft size={16} />
+        <PrevIcon size={16} />
       </button>
       {pages.map((p, i) =>
         p === '…' ? (
@@ -47,9 +54,9 @@ export default function Pagination({
         onClick={() => onChange(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
-        aria-label="Next page"
+        aria-label={t('next')}
       >
-        <ChevronRight size={16} />
+        <NextIcon size={16} />
       </button>
     </nav>
   );

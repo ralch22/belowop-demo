@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { X, CheckCircle2, MessageCircle } from 'lucide-react';
 
 // Jad's direct WhatsApp — the broker buyers reach for instant contact.
@@ -21,6 +22,8 @@ export default function LeadModal({
   listing: PublicListing;
   onClose: () => void;
 }) {
+  const t = useTranslations('leadModal');
+  const tc = useTranslations('common');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
@@ -129,8 +132,8 @@ export default function LeadModal({
         // inline rather than pretending the inquiry went through.
         const friendly =
           res.status === 429
-            ? (data.message ?? "You've reached today's inquiry limit. Try again tomorrow.")
-            : (data.message ?? data.error ?? "Couldn't send. Please try again.");
+            ? (data.message ?? t('errLimit'))
+            : (data.message ?? data.error ?? t('errSend'));
         setSubmitting(false);
         setErrorMsg(friendly);
         return;
@@ -140,7 +143,7 @@ export default function LeadModal({
       setTimeout(onClose, 3200);
     } catch {
       setSubmitting(false);
-      setErrorMsg("Couldn't reach the server. Check your connection and retry.");
+      setErrorMsg(t('errNetwork'));
     }
   }
 
@@ -211,7 +214,7 @@ export default function LeadModal({
       >
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t('close')}
           className="absolute end-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-400 dark:hover:bg-slate-800"
         >
           <X size={18} />
@@ -220,12 +223,12 @@ export default function LeadModal({
         {done ? (
           <div className="py-8 text-center" role="status" aria-live="polite">
             <CheckCircle2 className="mx-auto text-green-600 dark:text-green-400" size={48} />
-            <h3 className="mt-3 text-lg font-semibold">Thanks. Jad will WhatsApp you shortly.</h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Usually within the hour during business hours.</p>
+            <h3 className="mt-3 text-lg font-semibold">{t('thanksTitle')}</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('thanksBody')}</p>
           </div>
         ) : (
           <>
-            <h3 id="lead-title" className="text-lg font-semibold pe-8">Get details on this unit</h3>
+            <h3 id="lead-title" className="text-lg font-semibold pe-8">{t('title')}</h3>
 
             {gallery.length > 0 && (
               <ImageCarousel
@@ -250,7 +253,7 @@ export default function LeadModal({
                   {listing.unitType ?? bedsLabel(listing.beds)}{listing.bathrooms ? ` · ${listing.bathrooms} Bath` : ''} · {formatSqm(listing.sqft)}
                 </p>
                 {listing.handover && listing.type === 'off_plan' && (
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Handover: {listing.handover}{listing.paymentStatus ? ` · ${listing.paymentStatus}` : ''}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{t('handover', { handover: listing.handover })}{listing.paymentStatus ? ` · ${listing.paymentStatus}` : ''}</p>
                 )}
                 {listing.features && listing.features.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -265,7 +268,7 @@ export default function LeadModal({
                     <>
                       {' '}
                       <span className={`font-semibold ${dropColor(delta)}`}>{delta.toFixed(1)}%</span>
-                      <span className="ms-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
+                      <span className="ms-1 text-xs text-slate-600 dark:text-slate-400">{t('vsOp')}</span>
                     </>
                   )}
                 </p>
@@ -273,7 +276,7 @@ export default function LeadModal({
             </div>
 
             <form onSubmit={submit} className="mt-4 space-y-3">
-              <Field label="Your name">
+              <Field label={t('yourName')}>
                 <input
                   ref={nameRef}
                   required
@@ -287,10 +290,10 @@ export default function LeadModal({
                       ? 'border-red-500 dark:border-red-500'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
-                  placeholder="Sara A."
+                  placeholder={t('namePlaceholder')}
                 />
               </Field>
-              <Field label="WhatsApp number">
+              <Field label={t('whatsappNumber')}>
                 <div className="flex">
                   <span className="inline-flex items-center rounded-s-md border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
                   <input
@@ -307,17 +310,17 @@ export default function LeadModal({
                         ? 'border-red-500 dark:border-red-500'
                         : 'border-slate-300 dark:border-slate-700'
                     }`}
-                    placeholder="50 123 4567"
+                    placeholder={t('phonePlaceholder')}
                   />
                 </div>
               </Field>
-              <Field label="Message (optional)">
+              <Field label={t('messageOptional')}>
                 <textarea
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
-                  placeholder="Available to view this weekend?"
+                  placeholder={t('messagePlaceholder')}
                 />
               </Field>
               <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
@@ -327,7 +330,7 @@ export default function LeadModal({
                   onChange={(e) => setConsent(e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus-visible:ring-brand"
                 />
-                <span>I agree to the privacy notice & terms.</span>
+                <span>{t('consent')}</span>
               </label>
               {errorMsg && (
                 <p
@@ -343,22 +346,22 @@ export default function LeadModal({
                 disabled={!name || !phone || !consent || submitting}
                 className="w-full rounded-md bg-brand py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
               >
-                {submitting ? 'Sending…' : 'Request details'}
+                {submitting ? t('sending') : t('requestDetails')}
               </button>
               {showErrorHint && (
                 <p
                   aria-live="polite"
                   className="text-center text-[11px] text-amber-700 dark:text-amber-400"
                 >
-                  {!name && 'Name required · '}
-                  {!phone && 'WhatsApp number required · '}
-                  {!consent && 'Tick the consent box'}
+                  {!name && t('nameRequired')}
+                  {!phone && t('phoneRequired')}
+                  {!consent && t('consentRequired')}
                 </p>
               )}
 
               <div className="flex items-center gap-3 py-1" aria-hidden>
                 <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">or</span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">{tc('or')}</span>
                 <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
               </div>
               <a
@@ -367,10 +370,10 @@ export default function LeadModal({
                 rel="noopener noreferrer"
                 className="flex w-full items-center justify-center gap-2 rounded-md bg-[#25D366] py-2.5 text-sm font-medium text-white transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
               >
-                <MessageCircle size={16} /> Message Jad directly on WhatsApp
+                <MessageCircle size={16} /> {t('messageJad')}
               </a>
 
-              <p className="text-center text-xs text-slate-600 dark:text-slate-400">We&apos;ll WhatsApp you back within the hour.</p>
+              <p className="text-center text-xs text-slate-600 dark:text-slate-400">{t('replyWithin')}</p>
             </form>
           </>
         )}

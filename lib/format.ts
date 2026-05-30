@@ -74,7 +74,10 @@ export function sqftToSqm(sqft: number): number {
 }
 
 export function formatSqm(sqft: number): string {
-  return `${sqftToSqm(sqft).toLocaleString()} m²`;
+  // Pin to a Western-digit locale: a bare toLocaleString() would emit
+  // Arabic-Indic digits (٢٬٣٤٥) when the runtime locale is `ar`. The project
+  // decision is Western digits everywhere, so format explicitly.
+  return `${sqftToSqm(sqft).toLocaleString('en-US')} m²`;
 }
 
 // Price per m² in AED — returned as a clean integer

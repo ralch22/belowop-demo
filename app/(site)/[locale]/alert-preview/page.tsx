@@ -1,8 +1,17 @@
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listings, opaqueOf } from '@/lib/listings';
 import { formatAED, dropPct, imageUrl, formatSqm } from '@/lib/format';
 import { formatAedShort, formatUsdShort } from '@/lib/description-parser';
 
-export default function AlertPreviewPage() {
+export default async function AlertPreviewPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  // Chrome (heading/intro/caption) is localized; the alert message bodies are
+  // broker content and stay in their canonical English template.
+  setRequestLocale(locale);
+  const t = await getTranslations('alertPreview');
   // Pick a richly-enriched off-plan listing for the preview.
   const sample = listings.find((l) => l.type === 'off_plan' && l.handover && (l.features?.length ?? 0) >= 3) ?? listings[0];
   const delta = dropPct(sample.currentPrice, sample.originalPrice);
@@ -16,9 +25,9 @@ export default function AlertPreviewPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <header>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Alert message preview</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Below OP follows the canonical broker post template (Variables.pdf): project + features + handover + dual-currency + direct WhatsApp CTA.
+          {t('intro')}
         </p>
       </header>
 
@@ -48,7 +57,7 @@ Wa.me/${brokerWa}
 See all units → belowop-demo.vercel.app`}
             </div>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-400">Preview only · WhatsApp 1:1 delivery via Meta Cloud API direct (deferred — see docs/WhatsApp-Integration-Plan.md)</p>
+          <p className="mt-2 text-center text-[10px] text-slate-400">{t('previewOnly')} · WhatsApp 1:1 delivery via Meta Cloud API direct (deferred — see docs/WhatsApp-Integration-Plan.md)</p>
         </Phone>
 
         <Phone label="Telegram" tone="blue">

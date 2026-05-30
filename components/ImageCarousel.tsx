@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
@@ -40,6 +41,13 @@ export default function ImageCarousel({
   className?: string;
   overlay?: React.ReactNode;
 }) {
+  const t = useTranslations('carousel');
+  // Under RTL the gallery flows right→left, so the chevron glyphs and swipe
+  // direction must mirror even though the button *positions* (start-2/end-2)
+  // already flip via logical properties.
+  const rtl = useLocale() === 'ar';
+  const PrevIcon = rtl ? ChevronRight : ChevronLeft;
+  const NextIcon = rtl ? ChevronLeft : ChevronRight;
   const safe = images.filter(Boolean);
   const n = safe.length;
   const [i, setI] = useState(0);
@@ -72,7 +80,9 @@ export default function ImageCarousel({
         if (touchStartX === null) return;
         const dx = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
         if (Math.abs(dx) > 40) {
-          if (dx < 0) advance();
+          // LTR: swipe-left → next. RTL: swipe-left → prev (mirror the flow).
+          const swipedLeft = dx < 0;
+          if (swipedLeft !== rtl) advance();
           else prev();
         }
         setTouchStartX(null);
@@ -81,7 +91,7 @@ export default function ImageCarousel({
       <Image
         key={safe[idx]}
         src={safe[idx]}
-        alt={n > 1 ? `${alt} — photo ${idx + 1} of ${n}` : alt}
+        alt={n > 1 ? t('photoOfTotal', { alt, current: String(idx + 1), total: String(n) }) : alt}
         fill
         sizes={sizes}
         priority={priority && idx === 0}
@@ -93,25 +103,25 @@ export default function ImageCarousel({
         <>
           <button
             type="button"
-            aria-label="Previous photo"
+            aria-label={t('previousPhoto')}
             onClick={(e) => {
               e.stopPropagation();
               prev();
             }}
             className="absolute start-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
           >
-            <ChevronLeft size={18} />
+            <PrevIcon size={18} />
           </button>
           <button
             type="button"
-            aria-label="Next photo"
+            aria-label={t('nextPhoto')}
             onClick={(e) => {
               e.stopPropagation();
               advance();
             }}
             className="absolute end-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
           >
-            <ChevronRight size={18} />
+            <NextIcon size={18} />
           </button>
 
           <div className="absolute bottom-2 end-2 z-10 rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] font-medium tabular-nums text-white backdrop-blur">
@@ -123,7 +133,7 @@ export default function ImageCarousel({
               <button
                 key={src}
                 type="button"
-                aria-label={`Go to photo ${k + 1}`}
+                aria-label={t('goToPhoto', { index: String(k + 1) })}
                 aria-current={k === idx || undefined}
                 onClick={(e) => {
                   e.stopPropagation();

@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+const createNextIntlPlugin = require('next-intl/plugin');
+// Point the plugin at the request-scoped i18n config (messages + locale).
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   // Disable in development; enable for production builds.
@@ -133,4 +137,4 @@ const nextConfig = {
   },
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = withNextIntl(withPWA(nextConfig));

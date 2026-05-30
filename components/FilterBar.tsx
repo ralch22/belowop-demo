@@ -2,32 +2,27 @@
 
 import { SlidersHorizontal, ArrowUpDown, X, ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import clsx from 'clsx';
 import type { Filters } from '@/lib/listings';
 import { allCommunities, allDevelopers } from '@/lib/listings';
 
-const SORT_OPTIONS: { value: NonNullable<Filters['sort']>; label: string }[] = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'drop_desc', label: 'Biggest drop' },
-  { value: 'price_asc', label: 'Price ↑' },
-  { value: 'price_desc', label: 'Price ↓' },
-  { value: 'ppsqm_asc', label: 'AED/m² ↑' },
+// Value-only option lists. Labels are resolved through the `filters` message
+// namespace inside the component so EN/AR share one component. Bed counts and
+// price magnitudes (2M/5M/…) stay as Western-digit literals — they're listing
+// data presentation, not translatable chrome (consistent with bedsLabel() and
+// formatAED() in lib/format.ts).
+const SORT_VALUES: NonNullable<Filters['sort']>[] = [
+  'newest',
+  'drop_desc',
+  'price_asc',
+  'price_desc',
+  'ppsqm_asc',
 ];
 
-const TYPE_OPTIONS: { value: NonNullable<Filters['type']>; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'off_plan', label: 'Off-plan' },
-  { value: 'ready', label: 'Ready' },
-];
+const TYPE_VALUES: NonNullable<Filters['type']>[] = ['all', 'off_plan', 'ready'];
 
-const BEDS_OPTIONS: { value: NonNullable<Filters['beds']>; label: string }[] = [
-  { value: 'any', label: 'Any' },
-  { value: 'studio', label: 'Studio' },
-  { value: '1', label: '1' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3' },
-  { value: '4+', label: '4+' },
-];
+const BEDS_VALUES: NonNullable<Filters['beds']>[] = ['any', 'studio', '1', '2', '3', '4+'];
 
 export default function FilterBar({
   filters,
@@ -40,10 +35,36 @@ export default function FilterBar({
   total: number;
   filtered: number;
 }) {
+  const t = useTranslations('filters');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
   const morePanelRef = useRef<HTMLDivElement>(null);
+
+  // Translated option lists (chrome).
+  const sortLabels: Record<NonNullable<Filters['sort']>, string> = {
+    newest: t('sortNewest'),
+    drop_desc: t('sortBiggestDrop'),
+    price_asc: t('sortPriceAsc'),
+    price_desc: t('sortPriceDesc'),
+    ppsqm_asc: t('sortPpsqmAsc'),
+  };
+  const SORT_OPTIONS = SORT_VALUES.map((v) => ({ value: v, label: sortLabels[v] }));
+  const TYPE_OPTIONS = TYPE_VALUES.map((v) => ({
+    value: v,
+    label: v === 'all' ? t('all') : v === 'off_plan' ? t('offPlan') : t('ready'),
+  }));
+  const BEDS_OPTIONS = BEDS_VALUES.map((v) => ({
+    // 'any' is chrome; 'Studio' and the numerals stay English/Western.
+    value: v,
+    label: v === 'any' ? t('any') : v === 'studio' ? 'Studio' : v,
+  }));
+  const DROP_OPTIONS = [
+    { value: '0', label: t('any') },
+    { value: '5', label: t('drop5') },
+    { value: '10', label: t('drop10') },
+    { value: '15', label: t('drop15') },
+  ];
 
   // Track whether the overflow filters (Developer + Max price) are active so
   // the disclosure pill can show a count badge.
@@ -127,46 +148,41 @@ export default function FilterBar({
           </div>
 
           <Select
-            label="Beds"
+            label={t('beds')}
             value={filters.beds ?? 'any'}
             onChange={(v) => onChange({ beds: v as Filters['beds'] })}
             options={BEDS_OPTIONS.map((b) => ({ value: b.value, label: b.label }))}
           />
 
           <Select
-            label="Area"
+            label={t('area')}
             value={filters.community ?? ''}
             onChange={(v) => onChange({ community: v || undefined })}
-            options={[{ value: '', label: 'All areas' }, ...allCommunities.map((c) => ({ value: c, label: c }))]}
+            options={[{ value: '', label: t('allAreas') }, ...allCommunities.map((c) => ({ value: c, label: c }))]}
           />
 
           <Select
-            label="Min drop"
+            label={t('minDrop')}
             value={String(filters.minDropPct ?? 0)}
             onChange={(v) => onChange({ minDropPct: Number(v) || undefined })}
-            options={[
-              { value: '0', label: 'Any' },
-              { value: '5', label: '≥ 5%' },
-              { value: '10', label: '≥ 10%' },
-              { value: '15', label: '≥ 15%' },
-            ]}
+            options={DROP_OPTIONS}
           />
 
           {/* md to <lg: Developer + Max price stay inline. */}
           <div className="contents lg:hidden">
             <Select
-              label="Developer"
+              label={t('developer')}
               value={filters.developer ?? ''}
               onChange={(v) => onChange({ developer: v || undefined })}
-              options={[{ value: '', label: 'All developers' }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
+              options={[{ value: '', label: t('allDevelopers') }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
             />
 
             <Select
-              label="Max price"
+              label={t('maxPrice')}
               value={String(filters.maxPrice ?? 0)}
               onChange={(v) => onChange({ maxPrice: Number(v) || undefined })}
               options={[
-                { value: '0', label: 'Any' },
+                { value: '0', label: t('any') },
                 { value: '2000000', label: 'AED 2M' },
                 { value: '5000000', label: 'AED 5M' },
                 { value: '10000000', label: 'AED 10M' },
@@ -186,7 +202,7 @@ export default function FilterBar({
               aria-controls="more-filters-panel"
               className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
-              More filters
+              {t('moreFilters')}
               {overflowActiveCount > 0 && (
                 <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
                   {overflowActiveCount}
@@ -200,23 +216,23 @@ export default function FilterBar({
                 id="more-filters-panel"
                 role="dialog"
                 aria-modal="false"
-                aria-label="More filters"
+                aria-label={t('moreFiltersDialog')}
                 className="absolute start-0 top-full z-30 mt-2 w-72 rounded-md border border-slate-200 bg-white p-4 shadow-modal dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="space-y-3">
-                  <PanelField label="Developer">
+                  <PanelField label={t('developer')}>
                     <NativeSelect
                       value={filters.developer ?? ''}
                       onChange={(v) => onChange({ developer: v || undefined })}
-                      options={[{ value: '', label: 'All developers' }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
+                      options={[{ value: '', label: t('allDevelopers') }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
                     />
                   </PanelField>
-                  <PanelField label="Max price (AED)">
+                  <PanelField label={t('maxPriceAed')}>
                     <NativeSelect
                       value={String(filters.maxPrice ?? 0)}
                       onChange={(v) => onChange({ maxPrice: Number(v) || undefined })}
                       options={[
-                        { value: '0', label: 'Any' },
+                        { value: '0', label: t('any') },
                         { value: '2000000', label: '2M' },
                         { value: '5000000', label: '5M' },
                         { value: '10000000', label: '10M' },
@@ -231,7 +247,7 @@ export default function FilterBar({
                     onClick={() => onChange({ developer: undefined, maxPrice: undefined })}
                     className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Clear
+                    {t('clear')}
                   </button>
                   <button
                     type="button"
@@ -241,7 +257,7 @@ export default function FilterBar({
                     }}
                     className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
                   >
-                    Done
+                    {t('done')}
                   </button>
                 </div>
               </div>
@@ -250,7 +266,7 @@ export default function FilterBar({
 
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">
-              {filtered} of {total} units
+              {t('countOfTotal', { filtered: String(filtered), total: String(total) })}
             </span>
             <Select
               label={<ArrowUpDown size={14} />}
@@ -267,7 +283,7 @@ export default function FilterBar({
             onClick={() => setSheetOpen(true)}
             className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium dark:border-slate-700"
           >
-            <SlidersHorizontal size={16} /> Filter
+            <SlidersHorizontal size={16} /> {t('filter')}
             {activeFilterCount(filters) > 0 && (
               <span className="ms-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">
                 {activeFilterCount(filters)}
@@ -276,7 +292,7 @@ export default function FilterBar({
           </button>
           <Select
             compact
-            label="Sort"
+            label={t('sort')}
             value={filters.sort ?? 'newest'}
             onChange={(v) => onChange({ sort: v as Filters['sort'] })}
             options={SORT_OPTIONS.map((s) => ({ value: s.value, label: s.label }))}
@@ -290,17 +306,17 @@ export default function FilterBar({
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSheetOpen(false)} />
           <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-5 shadow-modal dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-base font-semibold">Filters</p>
+              <p className="text-base font-semibold">{t('filtersHeading')}</p>
               <button
               onClick={() => setSheetOpen(false)}
-              aria-label="Close filters"
+              aria-label={t('closeFilters')}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-400 dark:hover:bg-slate-800"
             >
               <X size={20} />
             </button>
             </div>
             <div className="space-y-4">
-              <Field label="Type">
+              <Field label={t('type')}>
                 <div className="flex gap-1 rounded-md bg-slate-100 p-1 dark:bg-slate-800">
                   {TYPE_OPTIONS.map((o) => (
                     <button
@@ -318,45 +334,40 @@ export default function FilterBar({
                   ))}
                 </div>
               </Field>
-              <Field label="Beds">
+              <Field label={t('beds')}>
                 <NativeSelect
                   value={filters.beds ?? 'any'}
                   onChange={(v) => onChange({ beds: v as Filters['beds'] })}
                   options={BEDS_OPTIONS.map((b) => ({ value: b.value, label: b.label }))}
                 />
               </Field>
-              <Field label="Area">
+              <Field label={t('area')}>
                 <NativeSelect
                   value={filters.community ?? ''}
                   onChange={(v) => onChange({ community: v || undefined })}
-                  options={[{ value: '', label: 'All areas' }, ...allCommunities.map((c) => ({ value: c, label: c }))]}
+                  options={[{ value: '', label: t('allAreas') }, ...allCommunities.map((c) => ({ value: c, label: c }))]}
                 />
               </Field>
-              <Field label="Developer">
+              <Field label={t('developer')}>
                 <NativeSelect
                   value={filters.developer ?? ''}
                   onChange={(v) => onChange({ developer: v || undefined })}
-                  options={[{ value: '', label: 'All developers' }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
+                  options={[{ value: '', label: t('allDevelopers') }, ...allDevelopers.map((d) => ({ value: d, label: d }))]}
                 />
               </Field>
-              <Field label="Min drop %">
+              <Field label={t('minDropPct')}>
                 <NativeSelect
                   value={String(filters.minDropPct ?? 0)}
                   onChange={(v) => onChange({ minDropPct: Number(v) || undefined })}
-                  options={[
-                    { value: '0', label: 'Any' },
-                    { value: '5', label: '≥ 5%' },
-                    { value: '10', label: '≥ 10%' },
-                    { value: '15', label: '≥ 15%' },
-                  ]}
+                  options={DROP_OPTIONS}
                 />
               </Field>
-              <Field label="Max price (AED)">
+              <Field label={t('maxPriceAed')}>
                 <NativeSelect
                   value={String(filters.maxPrice ?? 0)}
                   onChange={(v) => onChange({ maxPrice: Number(v) || undefined })}
                   options={[
-                    { value: '0', label: 'Any' },
+                    { value: '0', label: t('any') },
                     { value: '2000000', label: '2M' },
                     { value: '5000000', label: '5M' },
                     { value: '10000000', label: '10M' },
@@ -370,13 +381,13 @@ export default function FilterBar({
                 onClick={() => { onChange({ type: 'all', beds: 'any', community: undefined, developer: undefined, minDropPct: undefined, maxPrice: undefined }); }}
                 className="flex-1 rounded-md border border-slate-300 py-2.5 text-sm font-medium dark:border-slate-700"
               >
-                Reset
+                {t('reset')}
               </button>
               <button
                 onClick={() => setSheetOpen(false)}
                 className="flex-1 rounded-md bg-brand py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
               >
-                Show {filtered}
+                {t('showCount', { count: String(filtered) })}
               </button>
             </div>
           </div>

@@ -28,6 +28,12 @@ Thumbs.db
 *.swp
 *~
 
+# Office lock files (transient, created while a doc is open)
+~$*
+
+# Local-only editor/agent launch config (not part of the app)
+.claude/launch.json
+
 # next-pwa generated artifacts (built from manifest at build time)
 public/sw.js
 public/workbox-*.js
