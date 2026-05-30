@@ -110,6 +110,8 @@ export async function GET(req: Request) {
         beds: string;
         bathrooms: number | null;
         sqft: number;
+        bua_sqft: number | null;
+        plot_size_sqft: number | null;
         original_price: number;
         unit_type: string | null;
         features: string[];
@@ -118,7 +120,7 @@ export async function GET(req: Request) {
         handover: string | null;
         payment_status: string | null;
       }>`SELECT external_ref, project, developer, community, sub_location, type, beds, bathrooms, sqft,
-                original_price, unit_type, features, view, floor_position, handover, payment_status
+                bua_sqft, plot_size_sqft, original_price, unit_type, features, view, floor_position, handover, payment_status
          FROM listings WHERE id = ${event.listing_id};`;
       const l = lookup.rows[0];
       if (!l) {
@@ -135,6 +137,8 @@ export async function GET(req: Request) {
         beds: l.beds,
         bathrooms: l.bathrooms,
         sqft: l.sqft,
+        buaSqft: l.bua_sqft,
+        plotSqft: l.plot_size_sqft,
         features: l.features ?? [],
         view: l.view,
         floorPosition: l.floor_position,

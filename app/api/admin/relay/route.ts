@@ -36,6 +36,8 @@ interface Row {
   beds: string;
   bathrooms: number | null;
   sqft: number;
+  bua_sqft: number | null;
+  plot_size_sqft: number | null;
   current_price: number;
   original_price: number;
   unit_type: string | null;
@@ -61,7 +63,7 @@ export async function GET(req: Request) {
   if (source === 'recent') {
     const r = await sql<Row>`
       SELECT external_ref, project, developer, community, sub_location, type, beds, bathrooms, sqft,
-             current_price, original_price, unit_type, features, view, floor_position, handover, payment_status,
+             bua_sqft, plot_size_sqft, current_price, original_price, unit_type, features, view, floor_position, handover, payment_status,
              NULL::int AS alert_event_id, NULL::text AS alert_created_at, NULL::text AS dispatched_at
       FROM listings
       WHERE withdrawn_at IS NULL
@@ -73,7 +75,7 @@ export async function GET(req: Request) {
     // Pending alerts joined to their listing.
     const r = await sql<Row>`
       SELECT l.external_ref, l.project, l.developer, l.community, l.sub_location, l.type, l.beds, l.bathrooms, l.sqft,
-             l.current_price, l.original_price, l.unit_type, l.features, l.view, l.floor_position, l.handover, l.payment_status,
+             l.bua_sqft, l.plot_size_sqft, l.current_price, l.original_price, l.unit_type, l.features, l.view, l.floor_position, l.handover, l.payment_status,
              ae.id AS alert_event_id, ae.created_at::text AS alert_created_at, ae.dispatched_at::text AS dispatched_at
       FROM alert_events ae
       JOIN listings l ON l.id = ae.listing_id
@@ -93,6 +95,8 @@ export async function GET(req: Request) {
       beds: l.beds,
       bathrooms: l.bathrooms,
       sqft: l.sqft,
+      buaSqft: l.bua_sqft,
+      plotSqft: l.plot_size_sqft,
       features: l.features ?? [],
       view: l.view,
       floorPosition: l.floor_position,
