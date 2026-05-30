@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, Menu } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, Menu, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
 import clsx from 'clsx';
@@ -15,6 +15,19 @@ const links = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // The mobile panel stays in the DOM (collapsed via max-height) so it can
+  // animate open/closed. While collapsed it must not be keyboard-reachable or
+  // exposed to assistive tech — `inert` removes it from the tab order and the
+  // a11y tree. `inert` isn't in the stable React types yet, so toggle it via
+  // the DOM (same approach LeadModal uses for the page background).
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    if (open) el.removeAttribute('inert');
+    else el.setAttribute('inert', '');
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
@@ -49,14 +62,19 @@ export default function Nav() {
           <ThemeToggle />
         </nav>
         <button
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 dark:text-slate-300"
+          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => setOpen(!open)}
-          aria-label="Open menu"
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
         >
-          <Menu size={20} />
+          {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
       <div
+        id="mobile-menu"
+        ref={panelRef}
+        aria-hidden={!open}
         className={clsx(
           'md:hidden overflow-hidden border-t border-slate-200 dark:border-slate-800 transition-all',
           open ? 'max-h-64' : 'max-h-0',

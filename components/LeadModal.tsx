@@ -218,7 +218,7 @@ export default function LeadModal({
         </button>
 
         {done ? (
-          <div className="py-8 text-center">
+          <div className="py-8 text-center" role="status" aria-live="polite">
             <CheckCircle2 className="mx-auto text-green-600 dark:text-green-400" size={48} />
             <h3 className="mt-3 text-lg font-semibold">Thanks. Jad will WhatsApp you shortly.</h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Usually within the hour during business hours.</p>
