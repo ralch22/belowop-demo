@@ -49,11 +49,40 @@ export type PublicListing = Omit<Listing, 'ref'> & { opaqueId: string };
 /**
  * Strip the source ref and attach the opaque id. This is the single chokepoint
  * that turns a server-only `Listing` into a browser-safe `PublicListing`.
+ *
+ * It also rewrites every image field to the same-origin opaque proxy
+ * (`/img/{opaqueId}/{i}`, served by app/img/[id]/[idx]/route.ts). The real
+ * Blob / source-CDN URLs embed the PF ref in their path/host
+ * (`…/listings/PF-XXXXXXXX/3.webp`, `static.shared.propertyfinder.ae/…`), and
+ * next/image would otherwise leak that ref in both the `src` attribute and the
+ * `/_next/image?url=…` optimizer query string. Listings that carry no real
+ * image URLs (legacy seed shape: an Unsplash `imageId` only) hold no ref and
+ * are passed through untouched.
  */
 export function toPublicListing(l: Listing): PublicListing {
   // Pull `ref` out so it is never spread into the public object.
   const { ref, ...rest } = l;
-  return { ...rest, opaqueId: opaqueIdFromRef(ref) };
+  const opaqueId = opaqueIdFromRef(ref);
+
+  // The real, ref-bearing gallery as the server sees it.
+  const realGallery = rest.imageUrls?.length
+    ? rest.imageUrls
+    : rest.imageUrl
+      ? [rest.imageUrl]
+      : [];
+
+  if (realGallery.length > 0) {
+    const proxied = realGallery.map((_, i) => `/img/${opaqueId}/${i}`);
+    return {
+      ...rest,
+      opaqueId,
+      imageId: '', // no Unsplash fallback once we have a proxied gallery
+      imageUrl: proxied[0],
+      imageUrls: proxied,
+    };
+  }
+
+  return { ...rest, opaqueId };
 }
 
 // Seed data — used as fallback when the DB is empty / unconfigured, and by
