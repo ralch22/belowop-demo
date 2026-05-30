@@ -145,7 +145,7 @@ export default function AlertsPage() {
               label="WhatsApp"
             >
               <div className="flex">
-                <span className="inline-flex items-center rounded-l-md border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
+                <span className="inline-flex items-center rounded-s-md border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -154,7 +154,7 @@ export default function AlertsPage() {
                   autoComplete="tel"
                   inputMode="numeric"
                   placeholder="50 123 4567"
-                  className="block w-full rounded-r-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800 dark:disabled:bg-slate-900"
+                  className="block w-full rounded-e-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800 dark:disabled:bg-slate-900"
                 />
               </div>
             </Channel>

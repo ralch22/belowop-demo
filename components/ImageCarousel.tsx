@@ -98,7 +98,7 @@ export default function ImageCarousel({
               e.stopPropagation();
               prev();
             }}
-            className="absolute left-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
+            className="absolute start-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
           >
             <ChevronLeft size={18} />
           </button>
@@ -109,12 +109,12 @@ export default function ImageCarousel({
               e.stopPropagation();
               advance();
             }}
-            className="absolute right-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
+            className="absolute end-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-900/80 dark:text-slate-100"
           >
             <ChevronRight size={18} />
           </button>
 
-          <div className="absolute bottom-2 right-2 z-10 rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] font-medium tabular-nums text-white backdrop-blur">
+          <div className="absolute bottom-2 end-2 z-10 rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] font-medium tabular-nums text-white backdrop-blur">
             {idx + 1}/{n}
           </div>
 

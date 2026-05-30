@@ -34,7 +34,7 @@ export default function Nav() {
           ))}
           <Link
             href="/alerts"
-            className="group relative ml-2 inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:bg-slate-800"
+            className="group relative ms-2 inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-300 dark:hover:bg-slate-800"
             aria-label="Get alerts"
             title="Get alerts"
           >

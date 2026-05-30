@@ -201,7 +201,7 @@ export default function FilterBar({
                 role="dialog"
                 aria-modal="false"
                 aria-label="More filters"
-                className="absolute left-0 top-full z-30 mt-2 w-72 rounded-md border border-slate-200 bg-white p-4 shadow-modal dark:border-slate-700 dark:bg-slate-900"
+                className="absolute start-0 top-full z-30 mt-2 w-72 rounded-md border border-slate-200 bg-white p-4 shadow-modal dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="space-y-3">
                   <PanelField label="Developer">
@@ -269,7 +269,7 @@ export default function FilterBar({
           >
             <SlidersHorizontal size={16} /> Filter
             {activeFilterCount(filters) > 0 && (
-              <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">
+              <span className="ms-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">
                 {activeFilterCount(filters)}
               </span>
             )}
