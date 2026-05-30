@@ -4,11 +4,10 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   applyFilters,
-  buildOpaqueMaps,
   filtersFromParams,
   paramsFromFilters,
   type Filters,
-  type Listing,
+  type PublicListing,
 } from '@/lib/listings';
 import { relativeTime } from '@/lib/format';
 import FilterBar from './FilterBar';
@@ -39,7 +38,7 @@ export default function ListingsView({
   dataSource = 'seed',
   lastIngestAt = null,
 }: {
-  initialListings: Listing[];
+  initialListings: PublicListing[];
   dataSource?: 'db' | 'seed';
   /**
    * Timestamp of the last successful ingestion run (v_ingestion_freshness
@@ -92,15 +91,15 @@ export default function ListingsView({
     ? view ?? (isDesktop ? 'list' : 'grid')
     : null;
 
-  // Build opaque-ID lookup over whatever data we received from the server.
-  const { opaqueOf, findByOpaqueId } = useMemo(
-    () => buildOpaqueMaps(initialListings),
-    [initialListings],
-  );
-
+  // The server already stamped each listing with its opaque id (and stripped
+  // the raw ref), so the public id IS the listing's identity on the client —
+  // no ref↔opaque map needed. The `?inquire=` param carries the opaque id
+  // directly.
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(search.toString())), [search]);
   const inquireParam = search.get('inquire');
-  const activeListing = inquireParam ? findByOpaqueId(inquireParam) : undefined;
+  const activeListing = inquireParam
+    ? initialListings.find((l) => l.opaqueId === inquireParam)
+    : undefined;
 
   const filtered = useMemo(() => applyFilters(initialListings, filters), [filters, initialListings]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -139,12 +138,12 @@ export default function ListingsView({
   );
 
   const openInquire = useCallback(
-    (ref: string) => {
+    (opaqueId: string) => {
       const params = new URLSearchParams(search.toString());
-      params.set('inquire', opaqueOf(ref));
+      params.set('inquire', opaqueId);
       router.replace(`/?${params.toString()}`, { scroll: false });
     },
-    [router, search, opaqueOf],
+    [router, search],
   );
 
   const closeInquire = useCallback(() => {
@@ -204,7 +203,7 @@ export default function ListingsView({
                     : 'hidden'
               }
             >
-              <ListingTable items={pageItems} onInquire={openInquire} opaqueOf={opaqueOf} />
+              <ListingTable items={pageItems} onInquire={openInquire} />
             </div>
             <div
               className={
@@ -216,7 +215,7 @@ export default function ListingsView({
               }
             >
               {pageItems.map((l, idx) => (
-                <ListingCard key={l.ref} listing={l} onInquire={openInquire} priority={idx === 0} />
+                <ListingCard key={l.opaqueId} listing={l} onInquire={openInquire} priority={idx === 0} />
               ))}
             </div>
             <Pagination page={page} totalPages={totalPages} onChange={setPage} />

@@ -6,7 +6,7 @@ import { X, CheckCircle2, MessageCircle } from 'lucide-react';
 
 // Jad's direct WhatsApp — the broker buyers reach for instant contact.
 const JAD_WHATSAPP = '971585276222';
-import type { Listing } from '@/lib/listings';
+import type { PublicListing } from '@/lib/listings';
 import { buildEnquiryText } from '@/lib/listings';
 import { formatAED, dropPct, dropColor, bedsLabel, imageUrl, formatSqm } from '@/lib/format';
 import ImageCarousel from './ImageCarousel';
@@ -18,7 +18,7 @@ export default function LeadModal({
   listing,
   onClose,
 }: {
-  listing: Listing;
+  listing: PublicListing;
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
@@ -118,7 +118,10 @@ export default function LeadModal({
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, phone, message, listing_ref: listing.ref, consent }),
+        // Send only the opaque id — the raw PF ref never reaches the browser,
+        // so it can't be echoed back here. The server resolves the id to the
+        // real listing.
+        body: JSON.stringify({ name, phone, message, listing_id: listing.opaqueId, consent }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string };
       if (!res.ok || !data.ok) {

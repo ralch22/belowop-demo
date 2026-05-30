@@ -1,6 +1,6 @@
 'use client';
 
-import type { Listing } from '@/lib/listings';
+import type { PublicListing } from '@/lib/listings';
 import { safeProjectName } from '@/lib/op-parser';
 import {
   formatAED,
@@ -20,7 +20,7 @@ import ImageCarousel from './ImageCarousel';
  * Defensive against null/undefined/zero/equal sentinels — keeps the renderer
  * working regardless of which path Agent A took at the parser layer.
  */
-function hasKnownOp(l: Listing): boolean {
+function hasKnownOp(l: PublicListing): boolean {
   const op = l.originalPrice as number | null | undefined;
   if (op == null) return false;
   if (!Number.isFinite(op) || op <= 0) return false;
@@ -33,8 +33,8 @@ export default function ListingCard({
   onInquire,
   priority = false,
 }: {
-  listing: Listing;
-  onInquire: (ref: string) => void;
+  listing: PublicListing;
+  onInquire: (opaqueId: string) => void;
   priority?: boolean;
 }) {
   const known = hasKnownOp(listing);
@@ -45,7 +45,7 @@ export default function ListingCard({
   const project = safeProjectName(listing.project, listing.community);
   return (
     <article
-      onClick={() => onInquire(listing.ref)}
+      onClick={() => onInquire(listing.opaqueId)}
       tabIndex={0}
       role="button"
       aria-label={`Inquire about ${project ?? listing.community} in ${listing.community}`}
@@ -57,7 +57,7 @@ export default function ListingCard({
         if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
           e.preventDefault();
-          onInquire(listing.ref);
+          onInquire(listing.opaqueId);
         }
       }}
       className="cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card transition active:shadow-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-800 dark:bg-slate-900"

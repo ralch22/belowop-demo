@@ -1,19 +1,25 @@
 import { Suspense } from 'react';
 import ListingsView from '@/components/ListingsView';
-import { listings as seedListings, type Listing } from '@/lib/listings';
+import { listings as seedListings, toPublicListing, type PublicListing } from '@/lib/listings';
 import { fetchListings, ingestionFreshness, isDbConfigured } from '@/lib/db';
 
 export const revalidate = 60; // ISR — refresh listing data every 60s.
 
 async function loadListings(): Promise<{
-  listings: Listing[];
+  // CRITICAL (privacy): this page is the server→client chokepoint. We hand the
+  // client PublicListing[] — the raw PF ref is stripped here via
+  // toPublicListing and never enters the hydration payload. The opaque id is
+  // the only listing identifier the browser ever sees.
+  listings: PublicListing[];
   source: 'db' | 'seed';
   lastIngestAt: string | null;
 }> {
   // Only fall back to seed JSON when the DB isn't configured at all (local dev /
   // pre-provisioning state). Once the DB is connected we trust its truth — even
   // an empty DB renders the empty state rather than reverting to fake data.
-  if (!isDbConfigured()) return { listings: seedListings, source: 'seed', lastIngestAt: null };
+  if (!isDbConfigured()) {
+    return { listings: seedListings.map(toPublicListing), source: 'seed', lastIngestAt: null };
+  }
   try {
     // Pull listings and the ingestion-freshness headline in parallel. The
     // freshness query is best-effort: if it fails we still render listings and
@@ -25,7 +31,11 @@ async function loadListings(): Promise<{
         return null;
       }),
     ]);
-    return { listings: rows, source: 'db', lastIngestAt: freshness?.last_success_at ?? null };
+    return {
+      listings: rows.map(toPublicListing),
+      source: 'db',
+      lastIngestAt: freshness?.last_success_at ?? null,
+    };
   } catch (e) {
     console.error('[home] DB fetch failed:', e);
     return { listings: [], source: 'db', lastIngestAt: null };
