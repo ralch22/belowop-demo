@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import { Analytics } from '@vercel/analytics/next';
 import '../../globals.css';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { cairo } from '@/lib/fonts';
@@ -93,6 +94,7 @@ export default async function LocaleLayout({
           <main id="main" className="min-h-[calc(100vh-180px)]">{children}</main>
           <Footer />
           <InstallPrompt />
+          <Analytics />
         </NextIntlClientProvider>
       </body>
     </html>
