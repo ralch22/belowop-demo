@@ -15,6 +15,7 @@ import clsx from 'clsx';
 const links = [
   { href: '/', key: 'listings' },
   { href: '/alerts', key: 'alerts' },
+  { href: '/brokers', key: 'brokers' },
   { href: '/about', key: 'about' },
 ] as const;
 
