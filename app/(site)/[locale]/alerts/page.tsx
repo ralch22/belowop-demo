@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Link, useRouter } from '@/i18n/navigation';
 import { allCommunities } from '@/lib/listings';
 import clsx from 'clsx';
 
 export default function AlertsPage() {
+  const t = useTranslations('alerts');
   const router = useRouter();
   const [whatsapp, setWhatsapp] = useState(true);
   const [telegram, setTelegram] = useState(false);
@@ -41,12 +42,12 @@ export default function AlertsPage() {
           : null;
 
     if (!channel) {
-      setError('Please pick at least one channel.');
+      setError(t('errNoChannel'));
       return;
     }
     const contact = channel === 'whatsapp' ? phone.trim() : channel === 'telegram' ? tgUser.trim() : emailAddr.trim();
     if (!contact) {
-      setError('Please fill in the contact details for your selected channel.');
+      setError(t('errNoContact'));
       return;
     }
 
@@ -75,43 +76,44 @@ export default function AlertsPage() {
       router.push('/alerts/confirmed?channel=' + channel);
     } catch (err) {
       setSubmitting(false);
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof Error ? err.message : t('errGeneric'));
     }
   }
 
   // Public broadcast feeds — one-tap subscribe with no form. Populated from
   // NEXT_PUBLIC_* env vars so the URLs are baked at build time and can change
-  // without code edits.
-  const channels: { name: 'WhatsApp Channel' | 'Telegram Channel'; href: string; followers?: string; brand: string }[] = [
+  // without code edits. `key` is a stable channel id; the display label is
+  // resolved through the message catalog.
+  const channels: { key: 'whatsapp' | 'telegram'; name: string; href: string; brand: string }[] = [
     process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL
-      ? { name: 'WhatsApp Channel', href: process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL, brand: 'bg-[#25D366]' }
+      ? { key: 'whatsapp', name: t('whatsappChannel'), href: process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL, brand: 'bg-[#25D366]' }
       : null,
     process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL
-      ? { name: 'Telegram Channel', href: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL, brand: 'bg-[#229ED9]' }
-      : { name: 'Telegram Channel', href: 'https://t.me/dubaipropertydeal', brand: 'bg-[#229ED9]' },
-  ].filter(Boolean) as { name: 'WhatsApp Channel' | 'Telegram Channel'; href: string; brand: string }[];
+      ? { key: 'telegram', name: t('telegramChannel'), href: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL, brand: 'bg-[#229ED9]' }
+      : { key: 'telegram', name: t('telegramChannel'), href: 'https://t.me/dubaipropertydeal', brand: 'bg-[#229ED9]' },
+  ].filter(Boolean) as { key: 'whatsapp' | 'telegram'; name: string; href: string; brand: string }[];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-center">
-        Get Below-OP alerts in your inbox.
+        {t('title')}
       </h1>
       <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
-        Free. Unsubscribe anytime. Max 5 alerts/day. Telegram channel is live; WhatsApp 1:1 coming soon.
+        {t('subtitle')}
       </p>
 
       {channels.length > 0 && (
         <section className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-slate-900">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            Quickest: follow our public channels
+            {t('channelsTitle')}
           </h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-            Telegram auto-posts every new find. WhatsApp Channel is updated by hand shortly after. No sign-up, no form.
+            {t('channelsBody')}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {channels.map((c) => (
               <a
-                key={c.name}
+                key={c.key}
                 href={c.href}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -123,26 +125,26 @@ export default function AlertsPage() {
             ))}
           </div>
           <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
-            Want the alerts filtered to specific areas, bed counts, or drop %? Use the form below for a personalised feed.
+            {t('channelsFiltered')}
           </p>
           <div className="mt-4">
             <Link
               href="/alert-preview"
               className="inline-flex min-h-[44px] items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:text-slate-200 dark:hover:border-brand-dark dark:hover:text-brand-dark"
             >
-              Preview an alert <span aria-hidden>→</span>
+              {t('previewLink')} <span aria-hidden>→</span>
             </Link>
           </div>
         </section>
       )}
 
       <form onSubmit={submit} className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-slate-900">
-        <Section title="Where should we send alerts?">
+        <Section title={t('whereTitle')}>
           <div className="space-y-3">
             <Channel
               checked={whatsapp}
               onChange={setWhatsapp}
-              label="WhatsApp"
+              label={t('whatsapp')}
             >
               <div className="flex">
                 <span className="inline-flex items-center rounded-s-md border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
@@ -158,17 +160,17 @@ export default function AlertsPage() {
                 />
               </div>
             </Channel>
-            <Channel checked={telegram} onChange={setTelegram} label="Telegram">
+            <Channel checked={telegram} onChange={setTelegram} label={t('telegram')}>
               <input
                 value={tgUser}
                 onChange={(e) => setTgUser(e.target.value)}
                 disabled={!telegram}
                 autoComplete="username"
-                placeholder="@username"
+                placeholder={t('telegramPlaceholder')}
                 className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
               />
             </Channel>
-            <Channel checked={email} onChange={setEmail} label="Email">
+            <Channel checked={email} onChange={setEmail} label={t('email')}>
               <input
                 value={emailAddr}
                 onChange={(e) => setEmailAddr(e.target.value)}
@@ -176,36 +178,36 @@ export default function AlertsPage() {
                 type="email"
                 autoComplete="email"
                 inputMode="email"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-800"
               />
             </Channel>
           </div>
         </Section>
 
-        <Section title="What should we alert you about?">
+        <Section title={t('whatTitle')}>
           <div className="space-y-4">
-            <Field label="Type">
+            <Field label={t('type')}>
               <div className="inline-flex rounded-md bg-slate-100 p-1 dark:bg-slate-800">
-                {(['any', 'off_plan', 'ready'] as const).map((t) => (
+                {(['any', 'off_plan', 'ready'] as const).map((opt) => (
                   <button
-                    key={t}
+                    key={opt}
                     type="button"
-                    onClick={() => setType(t)}
+                    onClick={() => setType(opt)}
                     className={clsx(
                       'px-4 py-1.5 text-sm font-medium rounded',
-                      type === t
+                      type === opt
                         ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
                         : 'text-slate-600 dark:text-slate-400',
                     )}
                   >
-                    {t === 'any' ? 'Any' : t === 'off_plan' ? 'Off-plan' : 'Ready'}
+                    {opt === 'any' ? t('any') : opt === 'off_plan' ? t('offPlan') : t('ready')}
                   </button>
                 ))}
               </div>
             </Field>
 
-            <Field label="Areas">
+            <Field label={t('areas')}>
               <div className="flex flex-wrap gap-2">
                 {allCommunities.map((a) => (
                   <button
@@ -226,13 +228,13 @@ export default function AlertsPage() {
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Beds">
+              <Field label={t('beds')}>
                 <select
                   value={beds}
                   onChange={(e) => setBeds(e.target.value)}
                   className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
                 >
-                  <option value="any">Any</option>
+                  <option value="any">{t('any')}</option>
                   <option value="studio">Studio</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -240,7 +242,7 @@ export default function AlertsPage() {
                   <option value="4+">4+</option>
                 </select>
               </Field>
-              <Field label="Max price (AED)">
+              <Field label={t('maxPriceAed')}>
                 <select
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
@@ -250,12 +252,12 @@ export default function AlertsPage() {
                   <option value="5000000">5,000,000</option>
                   <option value="10000000">10,000,000</option>
                   <option value="20000000">20,000,000</option>
-                  <option value="0">No limit</option>
+                  <option value="0">{t('noLimit')}</option>
                 </select>
               </Field>
             </div>
 
-            <Field label={`Min drop %: ≥ ${drop}%`}>
+            <Field label={t('minDrop', { pct: String(drop) })}>
               <input
                 type="range"
                 min={5}
@@ -277,7 +279,7 @@ export default function AlertsPage() {
             onChange={(e) => setConsent(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
           />
-          <span>I agree to the privacy notice and terms.</span>
+          <span>{t('consent')}</span>
         </label>
 
         {error && (
@@ -294,7 +296,7 @@ export default function AlertsPage() {
           disabled={!consent || submitting || (!whatsapp && !telegram && !email)}
           className="mt-6 w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
         >
-          {submitting ? 'Sending confirmation…' : 'Subscribe'}
+          {submitting ? t('submitting') : t('subscribe')}
         </button>
       </form>
     </div>

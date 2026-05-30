@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import ListingsView from '@/components/ListingsView';
 import { listings as seedListings, toPublicListing, type PublicListing } from '@/lib/listings';
 import { fetchListings, ingestionFreshness, isDbConfigured } from '@/lib/db';
@@ -42,10 +43,17 @@ async function loadListings(): Promise<{
   }
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  // Opt this page into static rendering for the active locale (next-intl).
+  setRequestLocale(locale);
+  const t = await getTranslations('home');
   const { listings, source, lastIngestAt } = await loadListings();
   return (
-    <Suspense fallback={<div className="mx-auto max-w-content px-4 py-12 text-sm text-slate-500">Loading listings…</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-content px-4 py-12 text-sm text-slate-500">{t('loading')}</div>}>
       <ListingsView initialListings={listings} dataSource={source} lastIngestAt={lastIngestAt} />
     </Suspense>
   );

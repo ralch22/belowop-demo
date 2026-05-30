@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { Filters } from '@/lib/listings';
 
 /**
@@ -22,18 +23,19 @@ export default function ActiveFilters({
   onChange: (next: Partial<Filters>) => void;
   onReset: () => void;
 }) {
-  const chips = buildChips(filters);
+  const t = useTranslations('filters');
+  const chips = buildChips(filters, t);
   if (chips.length === 0) return null;
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-      <span className="font-medium text-slate-700 dark:text-slate-300">Filters:</span>
+      <span className="font-medium text-slate-700 dark:text-slate-300">{t('chipsLabel')}</span>
       {chips.map((chip) => (
         <button
           key={chip.key}
           type="button"
           onClick={() => onChange(chip.clear)}
-          aria-label={`Remove filter: ${chip.label}`}
+          aria-label={t('removeChip', { label: chip.label })}
           className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           <span>{chip.label}</span>
@@ -46,7 +48,7 @@ export default function ActiveFilters({
         onClick={onReset}
         className="text-xs font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand"
       >
-        Reset all
+        {t('resetAll')}
       </button>
     </div>
   );
@@ -59,12 +61,15 @@ interface Chip {
   clear: Partial<Filters>;
 }
 
-function buildChips(f: Filters): Chip[] {
+// `t` is the `filters` namespace translator. Chip values that are listing data
+// (community, developer, bed counts) stay verbatim/English; the chrome wrappers
+// (type label, "drop", "≤") are translated.
+function buildChips(f: Filters, t: (key: string, values?: Record<string, string>) => string): Chip[] {
   const chips: Chip[] = [];
   if (f.type && f.type !== 'all') {
     chips.push({
       key: 'type',
-      label: f.type === 'off_plan' ? 'Off-plan' : 'Ready',
+      label: f.type === 'off_plan' ? t('offPlan') : t('ready'),
       clear: { type: 'all' },
     });
   }
@@ -81,14 +86,14 @@ function buildChips(f: Filters): Chip[] {
   if (f.minDropPct) {
     chips.push({
       key: 'drop',
-      label: `≥ ${f.minDropPct}% drop`,
+      label: t('chipDrop', { pct: String(f.minDropPct) }),
       clear: { minDropPct: undefined },
     });
   }
   if (f.maxPrice) {
     chips.push({
       key: 'max',
-      label: `≤ ${formatPriceShort(f.maxPrice)}`,
+      label: t('chipMax', { price: formatPriceShort(f.maxPrice) }),
       clear: { maxPrice: undefined },
     });
   }

@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+const createNextIntlPlugin = require('next-intl/plugin');
+// Point the plugin at the request-scoped i18n config (messages + locale).
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   // Disable in development; enable for production builds.
@@ -90,6 +94,14 @@ const IMG_ORIGINS = [
   'https://images.unsplash.com',
 ];
 
+// Next.js dev-mode React Fast Refresh ships `@next/react-refresh-utils`, whose
+// runtime calls `eval()`. With a strict `script-src` (no `'unsafe-eval'`) the
+// browser throws an EvalError at that runtime, the client bundle never finishes
+// evaluating, and React never hydrates — so EVERY interactive control (filters,
+// sort, pagination, the inquire modal) is dead in local dev. Production builds
+// don't use eval, so we only relax the policy in development and keep prod strict.
+const isDev = process.env.NODE_ENV === 'development';
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -97,11 +109,11 @@ const csp = [
   "frame-ancestors 'none'",
   "frame-src 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   `img-src 'self' data: blob: ${IMG_ORIGINS.join(' ')}`,
-  `connect-src 'self' ${IMG_ORIGINS.join(' ')}`,
+  `connect-src 'self' https://vitals.vercel-insights.com ${IMG_ORIGINS.join(' ')}`,
   "manifest-src 'self'",
   "worker-src 'self'",
   'upgrade-insecure-requests',
@@ -133,4 +145,4 @@ const nextConfig = {
   },
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = withNextIntl(withPWA(nextConfig));

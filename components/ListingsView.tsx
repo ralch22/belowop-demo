@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useRouter, Link } from '@/i18n/navigation';
 import {
   applyFilters,
   filtersFromParams,
@@ -17,7 +19,6 @@ import ActiveFilters from './ActiveFilters';
 import Pagination from './Pagination';
 import LeadModal from './LeadModal';
 import Toast from './Toast';
-import Link from 'next/link';
 import { Bell, LayoutGrid, List } from 'lucide-react';
 
 // SRS-FR-24: paginate the public table 25 per page.
@@ -48,6 +49,7 @@ export default function ListingsView({
    */
   lastIngestAt?: string | null;
 }) {
+  const t = useTranslations('home');
   const router = useRouter();
   const search = useSearchParams();
   const [page, setPage] = useState(1);
@@ -158,18 +160,18 @@ export default function ListingsView({
         {/* FIX-13: compressed hero — H1 smaller, subhead dropped. */}
         <div className="mx-auto max-w-content px-4 py-5 sm:px-6 sm:py-6">
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Off-market & below-OP Dubai inventory.
+            {t('heroTitle')}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              Live · {initialListings.length} units
-              {lastRefreshedLabel ? ` · refreshed ${lastRefreshedLabel}` : ''}
+              {t('live')} · {t('unitsSuffix', { count: String(initialListings.length) })}
+              {lastRefreshedLabel ? ` · ${t('refreshedSuffix', { time: lastRefreshedLabel })}` : ''}
             </span>
             {dataSource === 'seed' && (
               <>
                 <span className="text-slate-400">·</span>
-                <span>Demo data</span>
+                <span>{t('demoData')}</span>
               </>
             )}
           </div>
@@ -227,7 +229,7 @@ export default function ListingsView({
             href="/alerts"
             className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-4 text-sm font-medium text-slate-800 hover:border-brand hover:text-brand dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-dark dark:hover:text-brand-dark"
           >
-            <Bell size={16} /> Get instant alerts on WhatsApp →
+            <Bell size={16} /> {t('getAlertsCta')}
           </Link>
         </div>
       </div>
@@ -245,6 +247,7 @@ function ViewToggle({
   value: 'grid' | 'list';
   onChange: (v: 'grid' | 'list') => void;
 }) {
+  const t = useTranslations('home');
   const btn = (active: boolean) =>
     `inline-flex h-8 w-8 items-center justify-center rounded transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand ${
       active
@@ -254,12 +257,12 @@ function ViewToggle({
   return (
     <div
       role="group"
-      aria-label="Layout"
+      aria-label={t('layoutGroup')}
       className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900"
     >
       <button
         type="button"
-        aria-label="List view"
+        aria-label={t('listView')}
         aria-pressed={value === 'list'}
         onClick={() => onChange('list')}
         className={btn(value === 'list')}
@@ -268,7 +271,7 @@ function ViewToggle({
       </button>
       <button
         type="button"
-        aria-label="Grid view"
+        aria-label={t('gridView')}
         aria-pressed={value === 'grid'}
         onClick={() => onChange('grid')}
         className={btn(value === 'grid')}
@@ -280,16 +283,17 @@ function ViewToggle({
 }
 
 function EmptyState({ onReset }: { onReset: () => void }) {
+  const t = useTranslations('home');
   return (
     <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
       <p className="text-4xl">🏠</p>
-      <h3 className="mt-3 text-lg font-semibold">No listings match your filters.</h3>
-      <p className="mt-1 text-sm text-slate-500">Try relaxing one of the filters above.</p>
+      <h3 className="mt-3 text-lg font-semibold">{t('emptyTitle')}</h3>
+      <p className="mt-1 text-sm text-slate-500">{t('emptyBody')}</p>
       <button
         onClick={onReset}
         className="mt-4 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
       >
-        Reset filters
+        {t('resetFilters')}
       </button>
     </div>
   );

@@ -20,6 +20,12 @@ next-env.d.ts
 # Vercel project link (contains project id)
 .vercel/
 
+# RERA broker registry source export — carries personal data (names, office
+# phone numbers). Imported into Postgres via db/import-brokers.ts; never
+# committed or bundled. (data/listings.json IS tracked — it's synthetic seed.)
+data/brokers.csv
+*.csv
+
 # OS / IDE
 .DS_Store
 Thumbs.db
@@ -27,6 +33,12 @@ Thumbs.db
 .idea/
 *.swp
 *~
+
+# Office lock files (transient, created while a doc is open)
+~$*
+
+# Local-only editor/agent launch config (not part of the app)
+.claude/launch.json
 
 # next-pwa generated artifacts (built from manifest at build time)
 public/sw.js

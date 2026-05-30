@@ -11,6 +11,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Arabic (RTL) pages use the self-hosted Cairo webfont (see lib/fonts.ts).
+   Scoped to dir=rtl so the English site keeps its existing font stack. */
+[dir='rtl'] body {
+  font-family: var(--font-cairo), 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
