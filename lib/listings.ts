@@ -36,6 +36,26 @@ export interface Listing {
   furnished?: string | null;
 }
 
+/**
+ * The shape we hand to the browser. CRITICAL (privacy): this is a `Listing`
+ * with the raw source reference (`ref`) stripped out and replaced by the
+ * non-reversible opaque id. The buyer-facing client components, the hydration
+ * payload, and any `?inquire=` URL only ever see `opaqueId` — the real PF ref
+ * never leaves the server. Map server `Listing`s through `toPublicListing`
+ * before passing them into a `'use client'` boundary.
+ */
+export type PublicListing = Omit<Listing, 'ref'> & { opaqueId: string };
+
+/**
+ * Strip the source ref and attach the opaque id. This is the single chokepoint
+ * that turns a server-only `Listing` into a browser-safe `PublicListing`.
+ */
+export function toPublicListing(l: Listing): PublicListing {
+  // Pull `ref` out so it is never spread into the public object.
+  const { ref, ...rest } = l;
+  return { ...rest, opaqueId: opaqueIdFromRef(ref) };
+}
+
 // Seed data — used as fallback when the DB is empty / unconfigured, and by
 // server-rendered pages that don't have access to a live query (e.g. alert-preview).
 export const listings: Listing[] = raw as Listing[];
@@ -82,8 +102,13 @@ export function findByRef(ref: string): Listing | undefined {
  * expose is the opaque internal id (same `u-xxxxxx` used in the public URL),
  * which Jad and we can map back to the real listing on our side.
  */
-export function buildEnquiryText(listing: Listing, heading?: string): string {
-  const id = opaqueIdFromRef(listing.ref);
+export function buildEnquiryText(
+  listing: { project: string; currentPrice: number; opaqueId?: string; ref?: string },
+  heading?: string,
+): string {
+  // Prefer the already-computed opaque id (PublicListing). Fall back to hashing
+  // a raw ref only for server-side callers that still hold a full Listing.
+  const id = listing.opaqueId ?? (listing.ref ? opaqueIdFromRef(listing.ref) : '');
   const title = heading ?? listing.project;
   return `Hi Jad, I'm interested in ${title} (Ref: ${id}) — AED ${formatAED(
     listing.currentPrice,
@@ -173,7 +198,16 @@ export function paramsFromFilters(params: URLSearchParams, next: Partial<Filters
   return params;
 }
 
-export function applyFilters(items: Listing[], f: Filters): Listing[] {
+// applyFilters only ever reads the comparable/sortable fields, never `ref`, so
+// it works for both the server-side Listing[] and the ref-stripped
+// PublicListing[] we hand the browser. Generic over a minimal field set so both
+// satisfy the constraint without a cast.
+type SortableListing = Pick<
+  Listing,
+  'type' | 'beds' | 'community' | 'developer' | 'currentPrice' | 'originalPrice' | 'sqft' | 'listedAt'
+>;
+
+export function applyFilters<T extends SortableListing>(items: T[], f: Filters): T[] {
   let r = items.slice();
   if (f.type && f.type !== 'all') r = r.filter((l) => l.type === f.type);
   if (f.beds && f.beds !== 'any') {

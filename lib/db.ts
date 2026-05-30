@@ -1,7 +1,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 import type { Listing } from './listings';
-import { pickImageUrls } from './format';
+import { pickImageUrls, opaqueIdFromRef } from './format';
 
 /**
  * Use @neondatabase/serverless directly, not @vercel/postgres.
@@ -163,6 +163,28 @@ export async function fetchListingByRef(ref: string): Promise<Listing | null> {
     LIMIT 1;
   `;
   return result.rows[0] ? rowToListing(result.rows[0]) : null;
+}
+
+/**
+ * Resolve an opaque public id (u-xxxxxx) back to its full listing.
+ *
+ * The opaque id is a one-way FNV-1a hash of external_ref (lib/format
+ * opaqueIdFromRef), so we can't query by it directly. The buyer only ever
+ * sends us this opaque id (the raw PF ref never reaches the browser), so the
+ * lead route resolves it here, server-side, to recover the real listing.
+ *
+ * Leads are rate-limited (3/phone/24h) and low-volume, so scanning the active
+ * refs to find the matching hash is acceptable — we only pull the ref column,
+ * then re-fetch the full row by its server-only ref.
+ */
+export async function fetchListingByOpaqueId(opaqueId: string): Promise<Listing | null> {
+  if (!opaqueId) return null;
+  const refs = await sql<{ external_ref: string }>`
+    SELECT external_ref FROM listings WHERE withdrawn_at IS NULL;
+  `;
+  const match = refs.rows.find((r) => opaqueIdFromRef(r.external_ref) === opaqueId);
+  if (!match) return null;
+  return fetchListingByRef(match.external_ref);
 }
 
 export async function insertLead(input: {

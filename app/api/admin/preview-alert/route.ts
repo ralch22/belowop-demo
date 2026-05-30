@@ -43,6 +43,8 @@ export async function GET(req: Request) {
     beds: string;
     bathrooms: number | null;
     sqft: number;
+    bua_sqft: number | null;
+    plot_size_sqft: number | null;
     current_price: number;
     original_price: number;
     unit_type: string | null;
@@ -55,7 +57,7 @@ export async function GET(req: Request) {
     source_image_urls: string[] | null;
   }>`
     SELECT external_ref, project, developer, community, sub_location, type, beds, bathrooms, sqft,
-           current_price, original_price, unit_type, features, view, floor_position, handover, payment_status, blob_image_urls, source_image_urls
+           bua_sqft, plot_size_sqft, current_price, original_price, unit_type, features, view, floor_position, handover, payment_status, blob_image_urls, source_image_urls
     FROM listings WHERE external_ref = ${ref} LIMIT 1;
   `;
   const l = r.rows[0];
@@ -71,6 +73,8 @@ export async function GET(req: Request) {
     beds: l.beds,
     bathrooms: l.bathrooms,
     sqft: l.sqft,
+    buaSqft: l.bua_sqft,
+    plotSqft: l.plot_size_sqft,
     features: l.features ?? [],
     view: l.view,
     floorPosition: l.floor_position,

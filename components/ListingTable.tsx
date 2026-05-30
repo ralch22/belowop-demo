@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowUp, ArrowDown, Hammer, Key } from 'lucide-react';
-import type { Listing, Filters } from '@/lib/listings';
+import type { PublicListing, Filters } from '@/lib/listings';
 import { safeProjectName } from '@/lib/op-parser';
 import {
   formatAED,
@@ -43,7 +43,7 @@ function sortFor(key: SortKey, dir: 'asc' | 'desc'): Filters['sort'] | null {
  *   - originalPrice <= 0 (sentinel from older code paths)
  *   - originalPrice === currentPrice (parser fell back to current price)
  */
-function hasKnownOp(l: Listing): boolean {
+function hasKnownOp(l: PublicListing): boolean {
   const op = l.originalPrice as number | null | undefined;
   if (op == null) return false;
   if (!Number.isFinite(op) || op <= 0) return false;
@@ -51,7 +51,7 @@ function hasKnownOp(l: Listing): boolean {
   return true;
 }
 
-function metaLine(l: Listing): string | null {
+function metaLine(l: PublicListing): string | null {
   const parts = [l.developer, relativeTime(l.listedAt)].filter(
     (p): p is string => typeof p === 'string' && p.trim().length > 0,
   );
@@ -62,11 +62,9 @@ function metaLine(l: Listing): string | null {
 export default function ListingTable({
   items,
   onInquire,
-  opaqueOf,
 }: {
-  items: Listing[];
-  onInquire: (ref: string) => void;
-  opaqueOf: (ref: string) => string;
+  items: PublicListing[];
+  onInquire: (opaqueId: string) => void;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -163,7 +161,7 @@ export default function ListingTable({
             const thumbSrc = l.imageUrl ?? imageUrl(l.imageId, 96);
             const project = safeProjectName(l.project, l.community);
             const meta = metaLine(l);
-            const href = `/?inquire=${opaqueOf(l.ref)}`;
+            const href = `/?inquire=${l.opaqueId}`;
 
             // Row click handler — same outcome as the anchor, but preserves
             // SPA replaceState (no full reload). Cmd/middle-click goes through
@@ -174,12 +172,12 @@ export default function ListingTable({
               if (e.defaultPrevented) return;
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();
-              onInquire(l.ref);
+              onInquire(l.opaqueId);
             };
 
             return (
               <tr
-                key={l.ref}
+                key={l.opaqueId}
                 tabIndex={0}
                 role="button"
                 aria-label={`Inquire about ${project ?? l.community} in ${l.community}`}
@@ -187,7 +185,7 @@ export default function ListingTable({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
                     e.preventDefault();
-                    onInquire(l.ref);
+                    onInquire(l.opaqueId);
                   }
                 }}
                 className="group cursor-pointer border-t border-slate-100 transition hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand dark:border-slate-800 dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800"

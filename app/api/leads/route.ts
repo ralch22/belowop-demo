@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { createHash } from 'node:crypto';
 import {
   fetchListingByRef,
+  fetchListingByOpaqueId,
   insertLead,
   markLeadNotified,
   isDbConfigured,
@@ -25,7 +26,10 @@ const LEAD_RL_WINDOW_SECONDS = 60 * 60 * 24;
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const { name, phone, message, listing_ref, consent } = body ?? {};
+  // `listing_id` is the opaque public id (u-xxxxxx) — the only listing
+  // identifier the browser holds. `listing_ref` is a legacy fallback for any
+  // older client/cached bundle that still posts the raw ref.
+  const { name, phone, message, listing_id, listing_ref, consent } = body ?? {};
 
   if (!name || !phone || !consent) {
     return NextResponse.json({ ok: false, error: 'missing required fields' }, { status: 400 });
@@ -74,7 +78,7 @@ export async function POST(req: Request) {
   // If the DB isn't configured yet, accept the lead but tell the caller we
   // logged a stub. The demo keeps working visually.
   if (!isDbConfigured()) {
-    console.log('[leads · stub]', { name, phone, listing_ref });
+    console.log('[leads · stub]', { name, phone, listingId: listing_id ?? listing_ref });
     return NextResponse.json({ ok: true, demo: true });
   }
 
@@ -82,9 +86,21 @@ export async function POST(req: Request) {
   const ipHash = ip ? createHash('sha256').update(ip).digest('hex').slice(0, 16) : undefined;
 
   try {
-    const listing = listing_ref ? await fetchListingByRef(listing_ref) : null;
+    // Resolve the listing server-side. Prefer the opaque id the browser sends;
+    // fall back to a raw ref only for legacy/cached clients. Either way we
+    // recover the real source ref (server-only) to attach the lead to its row.
+    let listing = null;
+    let resolvedRef: string | null = null;
+    if (listing_id) {
+      listing = await fetchListingByOpaqueId(listing_id);
+      resolvedRef = listing?.ref ?? null;
+    } else if (listing_ref) {
+      listing = await fetchListingByRef(listing_ref);
+      resolvedRef = listing_ref;
+    }
+
     const { id: leadId } = await insertLead({
-      listingRef: listing_ref,
+      listingRef: resolvedRef ?? '',
       name,
       phone,
       message,
@@ -94,11 +110,13 @@ export async function POST(req: Request) {
 
     // Surface the opaque internal id (matches what the buyer quotes on
     // WhatsApp); the raw PF ref stays in the DB/admin only.
+    const ownerListingId =
+      listing_id ?? (resolvedRef ? opaqueIdFromRef(resolvedRef) : '—');
     const notify = await notifyOwnerNewLead({
       name,
       phone,
       message,
-      listingId: listing_ref ? opaqueIdFromRef(listing_ref) : '—',
+      listingId: ownerListingId,
       listingProject: listing?.project ?? 'Unknown unit',
       listingPrice: listing?.currentPrice ?? 0,
     });

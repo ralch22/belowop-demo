@@ -1,5 +1,14 @@
 /**
- * Broker canonical alert template (Variables.pdf).
+ * Broker canonical alert template.
+ *
+ * Aligned to the "Below OP" WhatsApp content spec:
+ *   - Header:   🔴 *DISTRESS DEAL - BELOW OP* 🔴   (BELOW OP uppercase)
+ *   - Location: themed emoji + bold project (📍 fallback)
+ *   - Size:     ~XXXX sqft BUA  (literal ~ = "approx", + Plot when present)
+ *   - Price:    Selling Price: XX.XM Ð | $X.XXM 🔥  (Ð glyph, not "AED")
+ *   - Discount: strikethrough ~Original Price: XX.XM Ð~
+ *   - Footer:   direct WhatsApp + community group + deals channel
+ *
  * Used by /api/alerts/dispatch for real sends and /api/admin/preview-alert
  * for QA. Same code path, no drift.
  */
@@ -14,6 +23,10 @@ export interface AlertContext {
   beds: string;
   bathrooms: number | null;
   sqft: number;
+  /** Built-up area (villas). Falls back to `sqft` when null. */
+  buaSqft: number | null;
+  /** Plot size (villas). Rendered as a second size token when present. */
+  plotSqft: number | null;
   features: string[];
   view: string | null;
   floorPosition: string | null;
@@ -27,16 +40,47 @@ export interface AlertContext {
   webUrl: string;
 }
 
+// Brand links from the WhatsApp content spec. These are the exact short links
+// the content team uses across every post, so they're pinned here (not read
+// from env) to keep the alert footer deterministic and on-spec.
+const COMMUNITY_LINK = 'https://bit.ly/Dubaipropertydeals';
+const CHANNEL_LINK = 'https://bit.ly/DubaiPropertyDealsChannel';
+
+/** True only for a genuine below-OP discount (real, positive original < current). */
+function hasDiscount(ctx: AlertContext): boolean {
+  return ctx.original > 0 && ctx.original > ctx.current;
+}
+
 /**
- * "Project, Area" line per the broker PDF template. We use community as the
- * Area, dedupe if community is already mentioned in the project name (so we
- * don't render "Viewz 2 by Danube, Viewz 2 by Danube").
+ * "Project, Area" line per the broker template. We use community as the Area,
+ * dedupe if community is already mentioned in the project name (so we don't
+ * render "Viewz 2 by Danube, Viewz 2 by Danube").
  */
 function locationLine(ctx: AlertContext): string {
   const project = ctx.project.trim();
   const community = ctx.community.trim();
   if (!community || project.toLowerCase().includes(community.toLowerCase())) return project;
   return `${project}, ${community}`;
+}
+
+/**
+ * Themed location emoji per the spec ("relevant emoji + bold project name").
+ * Conservative keyword match on project/community/sub-location; falls back to
+ * the neutral 📍 pin when nothing strongly matches, so we never ship a
+ * misleading icon.
+ */
+function locationEmoji(ctx: AlertContext): string {
+  const hay = `${ctx.project} ${ctx.community} ${ctx.subLocation ?? ''}`.toLowerCase();
+  const map: [RegExp, string][] = [
+    [/\b(equestrian|equiterra|polo|stud|stables?)\b/, '🏇'],
+    [/\b(golf|fairway|emerald hills|els club|montgomerie)\b/, '⛳'],
+    [/\b(beach|marina|waterfront|water|island|harbour|harbor|creek|lagoon|seafront|cove|\bbay)\b/, '🌊'],
+    [/\bpalm\b/, '🌴'],
+    [/\b(hills?|park|greens?|forest|valley|meadows?|grove|gardens?)\b/, '🌳'],
+    [/\b(downtown|burj|boulevard|business bay|difc)\b/, '🏙️'],
+  ];
+  for (const [re, emoji] of map) if (re.test(hay)) return emoji;
+  return '📍';
 }
 
 export function brokerWhatsappNumber(): string {
@@ -46,12 +90,20 @@ export function brokerWhatsappNumber(): string {
   return raw && raw.length > 0 ? raw : '971585276222';
 }
 
+/** BUA figure for the size line — prefer the dedicated BUA column, else sqft. */
+function buaFigure(ctx: AlertContext): number {
+  return ctx.buaSqft && ctx.buaSqft > 0 ? ctx.buaSqft : ctx.sqft;
+}
+
 function bullets(ctx: AlertContext): string[] {
-  const sqm = Math.round(ctx.sqft * 0.092903);
   const out: string[] = [];
   out.push(ctx.unitType ? `*${ctx.unitType}*` : `*${ctx.beds === 'studio' ? 'Studio' : `${ctx.beds} Bedroom`}*`);
   if (ctx.bathrooms && ctx.bathrooms > 0) out.push(`*${ctx.bathrooms} Bathroom${ctx.bathrooms > 1 ? 's' : ''}*`);
-  out.push(`~*${ctx.sqft.toLocaleString()} sqft*~ | ~*${sqm.toLocaleString()} sqm*~`);
+  // Size: leading "~" is a literal "approximately" (not strikethrough), label
+  // BUA, no sqm. Append plot size for villas when we have it.
+  const sizeTokens = [`*~${buaFigure(ctx).toLocaleString()} sqft BUA*`];
+  if (ctx.plotSqft && ctx.plotSqft > 0) sizeTokens.push(`*~${ctx.plotSqft.toLocaleString()} sqft Plot*`);
+  out.push(sizeTokens.join(' | '));
   const featLines = ctx.features.slice(0, 5);
   if (featLines.length >= 2) {
     out.push(`*${featLines[0]}* | *${featLines[1]}*`);
@@ -64,9 +116,9 @@ function bullets(ctx: AlertContext): string[] {
 
 export function formatWhatsapp(ctx: AlertContext): string {
   const lines: string[] = [];
-  lines.push(`🔴 *DISTRESS DEAL - Below OP* 🔴`);
+  lines.push(`🔴 *DISTRESS DEAL - BELOW OP* 🔴`);
   lines.push('');
-  lines.push(`📍 *${locationLine(ctx)}*`);
+  lines.push(`${locationEmoji(ctx)} *${locationLine(ctx)}*`);
   lines.push('');
   for (const b of bullets(ctx)) lines.push(`• ${b}`);
   lines.push('');
@@ -74,27 +126,33 @@ export function formatWhatsapp(ctx: AlertContext): string {
   if (ctx.paymentStatus) lines.push(`*Payment*: ${ctx.paymentStatus}`);
   if (ctx.developer) lines.push(`*Developer*: *${ctx.developer}*`);
   lines.push('');
-  lines.push(`*Selling Price*: *${formatAedShort(ctx.current)} AED* | ${formatUsdShort(ctx.current)} 🔥`);
-  if (ctx.dropPct) lines.push(`📉 ${Math.abs(ctx.dropPct).toFixed(0)}% below OP (was ${formatAedShort(ctx.original)} AED)`);
+  if (hasDiscount(ctx)) lines.push(`~Original Price: ${formatAedShort(ctx.original)} Ð~`);
+  lines.push(`*Selling Price*: *${formatAedShort(ctx.current)} Ð* | ${formatUsdShort(ctx.current)} 🔥`);
   lines.push('');
   lines.push(`For serious inquiries contact:`);
-  lines.push(`Wa.me/${brokerWhatsappNumber()}`);
-  lines.push(`See all units → ${ctx.webUrl}`);
+  lines.push(`Wa.me/+${brokerWhatsappNumber()}`);
+  lines.push('');
+  lines.push(`Join our WhatsApp community to stay up to date:`);
+  lines.push(COMMUNITY_LINK);
+  lines.push('');
+  lines.push(`Join our WhatsApp channel to see all available deals:`);
+  lines.push(CHANNEL_LINK);
   return lines.join('\n');
 }
 
 export function formatTelegram(ctx: AlertContext): string {
   const e = escapeMd;
-  const sqm = Math.round(ctx.sqft * 0.092903);
   const lines: string[] = [];
-  lines.push(`🔴 *DISTRESS DEAL \\- Below OP* 🔴`);
+  lines.push(`🔴 *DISTRESS DEAL \\- BELOW OP* 🔴`);
   lines.push('');
-  lines.push(`📍 *${e(locationLine(ctx))}*`);
+  lines.push(`${locationEmoji(ctx)} *${e(locationLine(ctx))}*`);
   lines.push('');
   if (ctx.unitType) lines.push(`• *${e(ctx.unitType)}*`);
   else lines.push(`• *${ctx.beds === 'studio' ? 'Studio' : `${e(ctx.beds)} Bedroom`}*`);
   if (ctx.bathrooms) lines.push(`• *${ctx.bathrooms} Bathroom${ctx.bathrooms > 1 ? 's' : ''}*`);
-  lines.push(`• ~${e(`${ctx.sqft.toLocaleString()} sqft`)}~ \\| ~${e(`${sqm.toLocaleString()} sqm`)}~`);
+  const sizeTokens = [`*${e(`~${buaFigure(ctx).toLocaleString()} sqft BUA`)}*`];
+  if (ctx.plotSqft && ctx.plotSqft > 0) sizeTokens.push(`*${e(`~${ctx.plotSqft.toLocaleString()} sqft Plot`)}*`);
+  lines.push(`• ${sizeTokens.join(' \\| ')}`);
   const feats = ctx.features.slice(0, 5);
   if (feats.length >= 2) lines.push(`• *${e(feats[0])}* \\| *${e(feats[1])}*`);
   for (const f of feats.slice(2, 5)) lines.push(`• *${e(f)}*`);
@@ -103,10 +161,16 @@ export function formatTelegram(ctx: AlertContext): string {
   if (ctx.paymentStatus) lines.push(`*Payment*: ${e(ctx.paymentStatus)}`);
   if (ctx.developer) lines.push(`*Developer*: *${e(ctx.developer)}*`);
   lines.push('');
-  lines.push(`*Selling Price*: *${e(formatAedShort(ctx.current) + ' AED')}* \\| ${e(formatUsdShort(ctx.current))} 🔥`);
-  if (ctx.dropPct) lines.push(`📉 ${Math.abs(ctx.dropPct).toFixed(0)}% below OP \\(was ${e(formatAedShort(ctx.original) + ' AED')}\\)`);
+  if (hasDiscount(ctx)) lines.push(`~${e(`Original Price: ${formatAedShort(ctx.original)} Ð`)}~`);
+  lines.push(`*Selling Price*: *${e(`${formatAedShort(ctx.current)} Ð`)}* \\| ${e(formatUsdShort(ctx.current))} 🔥`);
   lines.push('');
-  lines.push(`For serious inquiries: [WhatsApp Jad](https://wa.me/${brokerWhatsappNumber()})`);
-  lines.push(`[See all units](${ctx.webUrl})`);
+  lines.push(`For serious inquiries contact:`);
+  lines.push(`[${e(`Wa.me/+${brokerWhatsappNumber()}`)}](https://wa.me/${brokerWhatsappNumber()})`);
+  lines.push('');
+  lines.push(`Join our WhatsApp community to stay up to date:`);
+  lines.push(`[${e(COMMUNITY_LINK.replace(/^https?:\/\//, ''))}](${COMMUNITY_LINK})`);
+  lines.push('');
+  lines.push(`Join our WhatsApp channel to see all available deals:`);
+  lines.push(`[${e(CHANNEL_LINK.replace(/^https?:\/\//, ''))}](${CHANNEL_LINK})`);
   return lines.join('\n');
 }
