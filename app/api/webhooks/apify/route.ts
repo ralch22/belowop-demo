@@ -7,17 +7,20 @@
  * Apify configuration:
  *   Event: ACTOR.RUN.SUCCEEDED
  *   URL:   https://belowop-demo.vercel.app/api/webhooks/apify
- *   Headers: Authorization: Bearer ${APIFY_WEBHOOK_SECRET}
+ *   Auth (either is accepted, HMAC preferred):
+ *     - x-belowop-signature: <hex HMAC-SHA256 of raw body, key=APIFY_WEBHOOK_SECRET>
+ *     - Authorization: Bearer ${APIFY_WEBHOOK_SECRET}   (native Apify webhook)
  *   Payload template (Apify default works — we need `eventData.actorRunId`
  *   and `resource.defaultDatasetId`).
  *
  * Required env on Vercel:
- *   APIFY_WEBHOOK_SECRET  (shared secret in the Authorization header)
+ *   APIFY_WEBHOOK_SECRET  (shared secret: HMAC key and/or Bearer value)
  *   APIFY_TOKEN           (read access to fetch dataset items via API)
  *   POSTGRES_URL
+ *   APIFY_REQUIRE_HMAC    (optional; "true" rejects Bearer-only requests)
  *
  * Flow:
- *   1. Verify Authorization header
+ *   1. Verify HMAC body signature (or Bearer fallback)
  *   2. Read runId + datasetId from the Apify payload
  *   3. Fetch dataset items via Apify API
  *   4. Map each azzouzana item → our DB schema (with OP parsed from description)
@@ -25,6 +28,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { verifyHmacSha256 } from '@/lib/hmac';
 import {
   upsertScrapedListing,
   isDbConfigured,
@@ -295,11 +299,36 @@ interface ApifyWebhookPayload {
   resource?: { id?: string; defaultDatasetId?: string; status?: string };
 }
 
-function authorize(req: Request): boolean {
+/**
+ * Authorize an Apify webhook request.
+ *
+ * Two accepted credentials, in order of preference:
+ *
+ *   1. HMAC body signature (preferred). The caller signs the *raw* request
+ *      body with the shared APIFY_WEBHOOK_SECRET (HMAC-SHA256) and sends the
+ *      hex digest in `x-belowop-signature`. This proves the body wasn't
+ *      tampered with in transit and keeps the secret off the wire.
+ *
+ *   2. Bearer token (fallback). Apify's *native* run.succeeded webhook only
+ *      supports a static `Authorization: Bearer <secret>` header, so we still
+ *      accept it for the live pipeline. Set APIFY_REQUIRE_HMAC=true to disable
+ *      this fallback once the upstream caller signs its bodies.
+ *
+ * Returns the method used (for logging) or null when unauthorized.
+ */
+function authorize(req: Request, rawBody: string): 'hmac' | 'bearer' | null {
   const secret = process.env.APIFY_WEBHOOK_SECRET;
-  if (!secret) return false;
+  if (!secret) return null;
+
+  const signature = req.headers.get('x-belowop-signature');
+  if (signature) {
+    return verifyHmacSha256(rawBody, signature, secret) ? 'hmac' : null;
+  }
+
+  // No signature present — fall back to Bearer unless HMAC is enforced.
+  if (process.env.APIFY_REQUIRE_HMAC === 'true') return null;
   const header = req.headers.get('authorization');
-  return header === `Bearer ${secret}`;
+  return header === `Bearer ${secret}` ? 'bearer' : null;
 }
 
 async function fetchDataset(datasetId: string, limit = 1000): Promise<AzzouzanaItem[]> {
@@ -328,7 +357,13 @@ async function fetchDataset(datasetId: string, limit = 1000): Promise<AzzouzanaI
 }
 
 export async function POST(req: Request) {
-  if (!authorize(req)) {
+  // Read the raw body once: HMAC verification must run over the exact bytes
+  // received (re-serializing parsed JSON would change whitespace/key order and
+  // invalidate the signature). We then JSON.parse the same string.
+  const rawBody = await req.text();
+
+  const authMethod = authorize(req, rawBody);
+  if (!authMethod) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
   if (!isDbConfigured()) {
@@ -337,7 +372,7 @@ export async function POST(req: Request) {
 
   let payload: ApifyWebhookPayload;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody) as ApifyWebhookPayload;
   } catch {
     return NextResponse.json({ ok: false, error: 'invalid JSON' }, { status: 400 });
   }
@@ -508,6 +543,6 @@ export async function POST(req: Request) {
     ).catch((e) => console.error('[apify webhook] failed to close ingestion_runs row', e));
   }
 
-  console.log('[apify webhook]', runId, stats);
+  console.log('[apify webhook]', `auth=${authMethod}`, runId, stats);
   return NextResponse.json({ ok: true, runId, stats });
 }

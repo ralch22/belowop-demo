@@ -70,6 +70,55 @@ const withPWA = require('next-pwa')({
   ],
 });
 
+// ---------------------------------------------------------------------------
+// Security headers (CLAUDE.md §7 — security hardening, HIGH-priority block).
+//
+// Content-Security-Policy is delivered as a static header. We allow
+// `'unsafe-inline'` for script/style because Next.js injects inline bootstrap
+// scripts and inline styles during hydration and next-pwa registers the
+// service worker inline; a strict nonce-based CSP would require per-request
+// middleware and is tracked as a future hardening. Even so, this policy blocks
+// all third-party script/connect/frame origins, clickjacking, MIME sniffing,
+// base-tag hijacking, and forces HTTPS.
+//
+// Image/connect origins mirror next.config `images.remotePatterns` plus the
+// Vercel Blob bucket and PropertyFinder CDN that the PWA service worker caches.
+// ---------------------------------------------------------------------------
+const IMG_ORIGINS = [
+  'https://wzn4byw4tfl22gbj.public.blob.vercel-storage.com',
+  'https://static.shared.propertyfinder.ae',
+  'https://images.unsplash.com',
+];
+
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "frame-src 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  `img-src 'self' data: blob: ${IMG_ORIGINS.join(' ')}`,
+  `connect-src 'self' ${IMG_ORIGINS.join(' ')}`,
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  'upgrade-insecure-requests',
+].join('; ');
+
+const securityHeaders = [
+  { key: 'Content-Security-Policy', value: csp },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()',
+  },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+];
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -78,6 +127,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'wzn4byw4tfl22gbj.public.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'static.shared.propertyfinder.ae' },
     ],
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
   },
 };
 

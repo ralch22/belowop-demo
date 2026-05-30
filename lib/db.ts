@@ -388,6 +388,11 @@ export async function activateSubscription(token: string): Promise<boolean> {
   return r.rowCount! > 0;
 }
 
+/**
+ * Legacy unsubscribe: match a raw confirm_token by plain equality. Retained
+ * only for backward compatibility with any link minted before signed tokens
+ * (lib/tokens.ts) existed. New links go through `unsubscribeBySubscriptionId`.
+ */
 export async function unsubscribe(token: string): Promise<boolean> {
   const r = await sql`
     UPDATE subscriptions SET status = 'unsubscribed', unsubscribed_at = NOW()
@@ -395,6 +400,29 @@ export async function unsubscribe(token: string): Promise<boolean> {
     RETURNING id;
   `;
   return r.rowCount! > 0;
+}
+
+/**
+ * Unsubscribe by subscription id, resolved from a verified signed token.
+ * Single-use: only the first call (where unsub_used_at IS NULL) flips the row;
+ * a replayed token finds it already consumed and returns 'already'.
+ *
+ *   'ok'        — this call unsubscribed the row
+ *   'already'   — row exists but the token was already used (replay / re-click)
+ *   'not_found' — no such subscription id
+ */
+export async function unsubscribeBySubscriptionId(
+  id: number,
+): Promise<'ok' | 'already' | 'not_found'> {
+  const r = await sql<{ id: number }>`
+    UPDATE subscriptions
+    SET status = 'unsubscribed', unsubscribed_at = NOW(), unsub_used_at = NOW()
+    WHERE id = ${id} AND unsub_used_at IS NULL
+    RETURNING id;
+  `;
+  if ((r.rowCount ?? 0) > 0) return 'ok';
+  const exists = await sql<{ id: number }>`SELECT id FROM subscriptions WHERE id = ${id} LIMIT 1;`;
+  return (exists.rowCount ?? 0) > 0 ? 'already' : 'not_found';
 }
 
 // ---------------------------------------------------------------------------
