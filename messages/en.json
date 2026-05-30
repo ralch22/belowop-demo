@@ -3,6 +3,15 @@
     "home": {
       "title": "Below OP — Dubai Property Tracker",
       "description": "Dubai properties listed below Original Price. Curated, off-market inventory."
+    },
+    "brokers": {
+      "title": "Verify a Dubai Broker — RERA Registry | Below OP",
+      "description": "Look up any Dubai real-estate agent and confirm their RERA licence is genuine and current. Public data from the Dubai Land Department."
+    },
+    "brokerProfile": {
+      "title": "{name} — RERA Broker Verification | Below OP",
+      "description": "Verify the RERA licence status of {name} at {firm} using public Dubai Land Department records.",
+      "notFoundTitle": "Broker not found | Below OP"
     }
   },
   "a11y": {
@@ -11,6 +20,7 @@
   "nav": {
     "listings": "Listings",
     "alerts": "Alerts",
+    "brokers": "Verify a broker",
     "about": "About",
     "getAlerts": "Get alerts",
     "openMenu": "Open menu",
@@ -253,5 +263,50 @@
     "title": "Alert message preview",
     "intro": "Below OP follows the canonical broker post template: project + features + handover + dual-currency + direct WhatsApp CTA.",
     "previewOnly": "Preview only"
+  },
+  "brokers": {
+    "title": "Verify a Dubai broker",
+    "intro": "Confirm any Dubai real-estate agent's RERA licence against the public Dubai Land Department registry. Search by name, broker number, or brokerage.",
+    "statTotal": "Registered brokers",
+    "statActive": "Active licences",
+    "statExpired": "Expired",
+    "statFirms": "Brokerages",
+    "searchPlaceholder": "Search by name, broker no., or firm…",
+    "searchLabel": "Search brokers",
+    "clearSearch": "Clear search",
+    "statusGroup": "Filter by licence status",
+    "status_all": "All",
+    "status_active": "Active",
+    "status_expired": "Expired",
+    "badge_active": "Active licence",
+    "badge_expiring": "Expiring soon",
+    "badge_expired": "Expired",
+    "badge_unknown": "Unverified",
+    "clearFirm": "Clear firm filter",
+    "resultCount": "{count} brokers",
+    "brokerNoShort": "No. {no}",
+    "validTo": "Valid to {date}",
+    "noResultsTitle": "No brokers found",
+    "noResultsBody": "No registered brokers match your search. Try a different name or number.",
+    "emptyBody": "The broker registry hasn't been loaded yet. Check back shortly.",
+    "clearFilters": "Clear filters",
+    "unavailableTitle": "Directory temporarily unavailable",
+    "unavailableBody": "We couldn't reach the broker registry right now. Please try again in a moment.",
+    "sourceNote": "Source: Dubai Land Department / RERA registered-broker data. This is public licensing information; personal contact numbers are not published. To request removal of your record, contact us.",
+    "pageNav": "Directory pages",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "pageOf": "Page {page} of {total}",
+    "backToDirectory": "Back to directory",
+    "verifyActive": "This broker is listed in the Dubai Land Department's RERA registry with a licence that is current as of today.",
+    "verifyExpired": "This broker is listed in the Dubai Land Department's RERA registry, but the licence on record has expired. Confirm renewal directly before transacting.",
+    "fieldBrokerNo": "Broker number",
+    "fieldBrokerageNo": "Brokerage licence no.",
+    "fieldValidFrom": "Licence valid from",
+    "fieldValidTo": "Licence valid to",
+    "fieldFirm": "Brokerage",
+    "fieldWebsite": "Website",
+    "expiresInDays": "in {days} days",
+    "removalNote": "This page reproduces public licensing data from the Dubai Land Department. If you are this broker and would like your record removed, <email>email us</email> and we will hide it promptly."
   }
 }

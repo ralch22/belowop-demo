@@ -1,6 +1,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 import type { Listing } from './listings';
+import type { PublicBroker } from './rera';
 import { pickImageUrls, opaqueIdFromRef } from './format';
 
 /**
@@ -663,4 +664,144 @@ export interface PruningRisk {
 export async function pruningRisk(): Promise<PruningRisk> {
   const r = await sql<PruningRisk>`SELECT * FROM v_listings_pruning_risk;`;
   return r.rows[0];
+}
+
+// ---------------------------------------------------------------------------
+// RERA broker registry (migration 0008) — public verification directory.
+//
+// PRIVACY: every query below is the PUBLIC surface, so none of them SELECT the
+// `phone` column. They also filter `hidden_at IS NULL` so a takedown request is
+// honoured by a single UPDATE. Read by /brokers and /brokers/[brokerNo].
+// ---------------------------------------------------------------------------
+
+interface PublicBrokerRow {
+  broker_number: string;
+  name_en: string;
+  name_ar: string | null;
+  gender: number | null;
+  license_start: string | null;
+  license_end: string | null;
+  webpage: string | null;
+  firm_domain: string | null;
+  firm_name: string | null;
+  real_estate_number: string | null;
+}
+
+function rowToPublicBroker(r: PublicBrokerRow): PublicBroker {
+  return {
+    brokerNumber: r.broker_number,
+    nameEn: r.name_en,
+    nameAr: r.name_ar,
+    gender: r.gender == null ? null : Number(r.gender),
+    licenseStart: r.license_start,
+    licenseEnd: r.license_end,
+    webpage: r.webpage,
+    firmDomain: r.firm_domain,
+    firmName: r.firm_name,
+    realEstateNumber: r.real_estate_number,
+  };
+}
+
+// Columns safe to expose publicly. License dates are cast to text so the Date
+// type's local-midnight parsing can't shift them across a timezone boundary.
+const PUBLIC_BROKER_COLS = `
+  broker_number, name_en, name_ar, gender,
+  license_start::text AS license_start, license_end::text AS license_end,
+  webpage, firm_domain, firm_name, real_estate_number
+`;
+
+export interface BrokerListResult {
+  brokers: PublicBroker[];
+  total: number;
+}
+
+/**
+ * Server-side search / filter / pagination over the directory. Built with the
+ * raw pool (not the `sql` tagged template) because the WHERE clause is dynamic.
+ * All inputs are passed as bound parameters — never interpolated into SQL.
+ */
+export async function fetchBrokers(opts: {
+  q?: string;
+  status?: 'active' | 'expired' | 'all';
+  firm?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<BrokerListResult> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 24));
+
+  const conds: string[] = ['hidden_at IS NULL'];
+  const params: unknown[] = [];
+
+  const q = opts.q?.trim();
+  if (q) {
+    params.push(`%${q}%`);
+    const p = `$${params.length}`;
+    conds.push(`(name_en ILIKE ${p} OR broker_number ILIKE ${p} OR firm_name ILIKE ${p})`);
+  }
+  if (opts.status === 'active') conds.push('license_end >= CURRENT_DATE');
+  else if (opts.status === 'expired') conds.push('license_end < CURRENT_DATE');
+
+  const firm = opts.firm?.trim();
+  if (firm) {
+    params.push(firm);
+    conds.push(`firm_domain = $${params.length}`);
+  }
+
+  const where = conds.join(' AND ');
+
+  const countRes = await pool.query(`SELECT COUNT(*)::int AS n FROM rera_brokers WHERE ${where};`, params);
+  const total = (countRes.rows[0]?.n as number) ?? 0;
+
+  const listRes = await pool.query(
+    `SELECT ${PUBLIC_BROKER_COLS}
+       FROM rera_brokers
+      WHERE ${where}
+      ORDER BY (license_end >= CURRENT_DATE) DESC NULLS LAST, name_en ASC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
+    [...params, pageSize, (page - 1) * pageSize],
+  );
+  return { brokers: (listRes.rows as PublicBrokerRow[]).map(rowToPublicBroker), total };
+}
+
+export async function fetchBrokerByNumber(brokerNumber: string): Promise<PublicBroker | null> {
+  const r = await pool.query(
+    `SELECT ${PUBLIC_BROKER_COLS} FROM rera_brokers WHERE broker_number = $1 AND hidden_at IS NULL LIMIT 1;`,
+    [brokerNumber],
+  );
+  const row = r.rows[0] as PublicBrokerRow | undefined;
+  return row ? rowToPublicBroker(row) : null;
+}
+
+export interface BrokerDirectoryStats {
+  total: number;
+  active: number;
+  expired: number;
+  firms: number;
+}
+
+export async function brokerDirectoryStats(): Promise<BrokerDirectoryStats> {
+  const r = await sql<BrokerDirectoryStats>`
+    SELECT COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE license_end >= CURRENT_DATE)::int AS active,
+           COUNT(*) FILTER (WHERE license_end <  CURRENT_DATE)::int AS expired,
+           COUNT(DISTINCT firm_domain)::int AS firms
+    FROM rera_brokers
+    WHERE hidden_at IS NULL;
+  `;
+  return r.rows[0] ?? { total: 0, active: 0, expired: 0, firms: 0 };
+}
+
+export async function topFirms(
+  limit = 12,
+): Promise<{ firmDomain: string; firmName: string | null; count: number }[]> {
+  const r = await sql<{ firm_domain: string; firm_name: string | null; n: number }>`
+    SELECT firm_domain, MAX(firm_name) AS firm_name, COUNT(*)::int AS n
+    FROM rera_brokers
+    WHERE hidden_at IS NULL AND firm_domain IS NOT NULL
+    GROUP BY firm_domain
+    ORDER BY n DESC, firm_domain ASC
+    LIMIT ${limit};
+  `;
+  return r.rows.map((x) => ({ firmDomain: x.firm_domain, firmName: x.firm_name, count: x.n }));
 }
