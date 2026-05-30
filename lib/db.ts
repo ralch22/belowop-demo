@@ -1,6 +1,7 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 import type { Listing } from './listings';
+import { pickImageUrls } from './format';
 
 /**
  * Use @neondatabase/serverless directly, not @vercel/postgres.
@@ -93,9 +94,10 @@ export function rowToListing(r: ListingRow): Listing {
   // Prefer the Blob URL (our re-hosted WebP). Fall back to the source CDN URL
   // if image-sync hasn't run for this listing yet. Last resort: extract an
   // Unsplash photo ID from the URL so the legacy seed-style rendering works.
-  const blobUrl = r.blob_image_urls?.[0] ?? null;
-  const sourceUrl = r.source_image_urls?.[0] ?? null;
-  const imageUrl = blobUrl ?? sourceUrl;
+  // Merge both arrays into one ordered gallery (Blob preferred per index,
+  // source CDN as fallback). First entry is the canonical single image.
+  const imageUrls = pickImageUrls(r.blob_image_urls, r.source_image_urls);
+  const imageUrl = imageUrls[0] ?? null;
   // Extract Unsplash imageId only for backward-compat — most real listings
   // won't match this regex and that's fine (imageUrl is the canonical field).
   const m = imageUrl?.match(/photo-([a-z0-9-]+)/i);
@@ -121,6 +123,7 @@ export function rowToListing(r: ListingRow): Listing {
     listedAt: new Date(r.listed_at).toISOString(),
     imageId,
     imageUrl,
+    imageUrls,
     unitType: r.unit_type,
     bathrooms: r.bathrooms,
     features: r.features,

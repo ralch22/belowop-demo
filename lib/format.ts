@@ -36,6 +36,38 @@ export function imageUrl(id: string, w = 800): string {
   return `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`;
 }
 
+/**
+ * Merge the two image-URL arrays a listing carries into a single ordered
+ * gallery. We re-host images on Vercel Blob (`blob_image_urls`) but keep the
+ * origin CDN URLs (`source_image_urls`) as a fallback. The two arrays are
+ * positionally parallel — index i in each refers to the same photo — so we
+ * align by index and prefer the Blob URL when present, falling back to the
+ * source URL. This means a partially-mirrored listing (a gap in `blob`) still
+ * shows every photo in the right order.
+ *
+ * - Per index: blob[i] if truthy, else source[i].
+ * - The longer of the two arrays sets the gallery length.
+ * - Falsy results (both missing at that index) are dropped.
+ * - Duplicates are removed while preserving first-seen order.
+ *
+ * Kept here (not in lib/db.ts) so it's unit-testable without the Postgres
+ * driver, which db.ts loads at module import time.
+ */
+export function pickImageUrls(
+  blob?: string[] | null,
+  source?: string[] | null,
+): string[] {
+  const b = blob ?? [];
+  const s = source ?? [];
+  const n = Math.max(b.length, s.length);
+  const out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const u = b[i] || s[i];
+    if (u) out.push(u);
+  }
+  return Array.from(new Set(out));
+}
+
 // Convert sqft → m² (1 sqft = 0.092903 m²)
 export function sqftToSqm(sqft: number): number {
   return Math.round(sqft * 0.092903);

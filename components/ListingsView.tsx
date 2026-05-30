@@ -19,7 +19,7 @@ import Pagination from './Pagination';
 import LeadModal from './LeadModal';
 import Toast from './Toast';
 import Link from 'next/link';
-import { Bell } from 'lucide-react';
+import { Bell, LayoutGrid, List } from 'lucide-react';
 
 // SRS-FR-24: paginate the public table 25 per page.
 const PAGE_SIZE = 25;
@@ -53,6 +53,44 @@ export default function ListingsView({
   const search = useSearchParams();
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Layout toggle (grid ↔ list). `null` until mounted so the server-rendered
+  // markup keeps the original responsive behaviour (table on lg+, cards below)
+  // and we never get a hydration mismatch. After mount we restore the saved
+  // preference and track the viewport so the *default* (no explicit choice)
+  // still mirrors the breakpoint.
+  const [view, setView] = useState<'grid' | 'list' | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem('belowop:view');
+      if (saved === 'grid' || saved === 'list') setView(saved);
+    } catch {
+      /* localStorage unavailable (private mode / SSR) — fall back to default */
+    }
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const setViewPref = useCallback((v: 'grid' | 'list') => {
+    setView(v);
+    try {
+      localStorage.setItem('belowop:view', v);
+    } catch {
+      /* ignore persistence failures */
+    }
+  }, []);
+
+  // null → pre-hydration (use the responsive Tailwind classes verbatim).
+  const effectiveView: 'grid' | 'list' | null = mounted
+    ? view ?? (isDesktop ? 'list' : 'grid')
+    : null;
 
   // Build opaque-ID lookup over whatever data we received from the server.
   const { opaqueOf, findByOpaqueId } = useMemo(
@@ -152,8 +190,31 @@ export default function ListingsView({
           <EmptyState onReset={() => updateParams(FILTER_DEFAULTS)} />
         ) : (
           <>
-            <ListingTable items={pageItems} onInquire={openInquire} opaqueOf={opaqueOf} />
-            <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
+            {mounted && effectiveView && (
+              <div className="mb-4 flex items-center justify-end">
+                <ViewToggle value={effectiveView} onChange={setViewPref} />
+              </div>
+            )}
+            <div
+              className={
+                effectiveView === null
+                  ? 'hidden lg:block'
+                  : effectiveView === 'list'
+                    ? 'block'
+                    : 'hidden'
+              }
+            >
+              <ListingTable items={pageItems} onInquire={openInquire} opaqueOf={opaqueOf} />
+            </div>
+            <div
+              className={
+                effectiveView === null
+                  ? 'grid gap-4 sm:grid-cols-2 lg:hidden'
+                  : effectiveView === 'grid'
+                    ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    : 'hidden'
+              }
+            >
               {pageItems.map((l, idx) => (
                 <ListingCard key={l.ref} listing={l} onInquire={openInquire} priority={idx === 0} />
               ))}
@@ -175,6 +236,47 @@ export default function ListingsView({
       {activeListing && <LeadModal listing={activeListing} onClose={closeInquire} />}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </>
+  );
+}
+
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: 'grid' | 'list';
+  onChange: (v: 'grid' | 'list') => void;
+}) {
+  const btn = (active: boolean) =>
+    `inline-flex h-8 w-8 items-center justify-center rounded transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand ${
+      active
+        ? 'bg-brand text-white'
+        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+    }`;
+  return (
+    <div
+      role="group"
+      aria-label="Layout"
+      className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <button
+        type="button"
+        aria-label="List view"
+        aria-pressed={value === 'list'}
+        onClick={() => onChange('list')}
+        className={btn(value === 'list')}
+      >
+        <List size={16} />
+      </button>
+      <button
+        type="button"
+        aria-label="Grid view"
+        aria-pressed={value === 'grid'}
+        onClick={() => onChange('grid')}
+        className={btn(value === 'grid')}
+      >
+        <LayoutGrid size={16} />
+      </button>
+    </div>
   );
 }
 

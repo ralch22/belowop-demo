@@ -16,6 +16,7 @@ import {
 } from '@/lib/db';
 import { isKvConfigured, rateLimit } from '@/lib/kv';
 import { notifyOwnerNewLead } from '@/lib/notify';
+import { opaqueIdFromRef } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,11 +92,13 @@ export async function POST(req: Request) {
       ipHash,
     });
 
+    // Surface the opaque internal id (matches what the buyer quotes on
+    // WhatsApp); the raw PF ref stays in the DB/admin only.
     const notify = await notifyOwnerNewLead({
       name,
       phone,
       message,
-      listingRef: listing_ref ?? '—',
+      listingId: listing_ref ? opaqueIdFromRef(listing_ref) : '—',
       listingProject: listing?.project ?? 'Unknown unit',
       listingPrice: listing?.currentPrice ?? 0,
     });

@@ -112,8 +112,8 @@ export default function ListingTable({
   };
 
   return (
-    <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900 lg:block">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900">
+      <table className="w-full min-w-[768px] text-sm">
         <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
           <tr>
             <th className="w-16 px-4 py-3"></th>

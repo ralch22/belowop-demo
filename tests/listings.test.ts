@@ -18,10 +18,11 @@ import {
   applyFilters,
   filtersFromParams,
   paramsFromFilters,
+  buildEnquiryText,
   type Filters,
   type Listing,
 } from '../lib/listings';
-import { bedsLabel } from '../lib/format';
+import { bedsLabel, pickImageUrls, opaqueIdFromRef } from '../lib/format';
 
 // ---------- micro test framework (zero deps) ----------
 
@@ -443,6 +444,80 @@ test('pagination · last page slice has only the remainder', () => {
   eq(slice.length, 2);            // 102 = 4*25 + 2
   eq(slice[0], 100);
   eq(slice[1], 101);
+});
+
+// ---------- buildEnquiryText (privacy: opaque id, never the PF ref) ----------
+//
+// The WhatsApp enquiry a buyer sends to Jad must carry only the opaque internal
+// id (u-xxxxxx). Leaking the PropertyFinder reference here would expose the
+// underlying source listing to buyers — the exact bug this fixes.
+
+test('buildEnquiryText · embeds the opaque id, never the raw PF ref', () => {
+  const l = mk({ ref: 'PF-44021', project: 'Marina Bay', currentPrice: 1_000_000 });
+  const text = buildEnquiryText(l);
+  const id = opaqueIdFromRef('PF-44021');
+  eq(text.includes(id), true, 'enquiry should contain the opaque id');
+  eq(text.includes('PF-44021'), false, 'enquiry must NOT contain the raw PF ref');
+  eq(/\bPF-\d+\b/.test(text), false, 'enquiry must not contain any PF-#### token');
+});
+
+test('buildEnquiryText · uses the explicit heading when provided', () => {
+  const l = mk({ ref: 'PF-7', project: 'Project X', currentPrice: 2_500_000 });
+  const text = buildEnquiryText(l, 'Marina Bay, Tower 2');
+  eq(text.includes('Marina Bay, Tower 2'), true, 'should use the passed heading');
+  eq(text.includes(opaqueIdFromRef('PF-7')), true);
+});
+
+test('buildEnquiryText · falls back to project when no heading given', () => {
+  const l = mk({ ref: 'PF-9', project: 'Downtown Views', currentPrice: 3_000_000 });
+  const text = buildEnquiryText(l);
+  eq(text.includes('Downtown Views'), true);
+});
+
+test('buildEnquiryText · includes a formatted AED price', () => {
+  const l = mk({ ref: 'PF-1', currentPrice: 1_234_567 });
+  const text = buildEnquiryText(l);
+  // formatAED uses thousands separators (en-AE → "1,234,567").
+  eq(text.includes('1,234,567'), true, 'price should be thousands-formatted');
+});
+
+// ---------- pickImageUrls (gallery merge: blob preferred, source fallback) ----------
+
+test('pickImageUrls · prefers the blob URL per index, source fills the rest', () => {
+  const blob = ['b0', 'b1'];
+  const source = ['s0', 's1', 's2'];
+  eq(pickImageUrls(blob, source), ['b0', 'b1', 's2']);
+});
+
+test('pickImageUrls · returns every image (longer array sets the length)', () => {
+  const blob = ['b0'];
+  const source = ['s0', 's1', 's2', 's3'];
+  eq(pickImageUrls(blob, source).length, 4);
+});
+
+test('pickImageUrls · all blob when blob is the complete set', () => {
+  eq(pickImageUrls(['b0', 'b1', 'b2'], ['s0', 's1', 's2']), ['b0', 'b1', 'b2']);
+});
+
+test('pickImageUrls · filters out falsy entries', () => {
+  const blob = ['b0', '', 'b2'] as string[];
+  const source = ['s0', 's1', 's2'];
+  // '' at index 1 is dropped from blob, so index 1 falls back to source.
+  eq(pickImageUrls(blob, source), ['b0', 's1', 'b2']);
+});
+
+test('pickImageUrls · dedupes while preserving first-seen order', () => {
+  eq(pickImageUrls(['a', 'b'], ['a', 'b']), ['a', 'b']);
+});
+
+test('pickImageUrls · empty / null inputs → empty array', () => {
+  eq(pickImageUrls(), []);
+  eq(pickImageUrls(null, null), []);
+  eq(pickImageUrls([], []), []);
+});
+
+test('pickImageUrls · source-only listing still returns its photos', () => {
+  eq(pickImageUrls([], ['s0', 's1']), ['s0', 's1']);
 });
 
 // ---------- runner ----------

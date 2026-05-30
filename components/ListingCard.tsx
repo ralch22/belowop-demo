@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import type { Listing } from '@/lib/listings';
 import { safeProjectName } from '@/lib/op-parser';
 import {
@@ -14,6 +13,7 @@ import {
   formatPricePerSqm,
 } from '@/lib/format';
 import { Hammer, Key } from 'lucide-react';
+import ImageCarousel from './ImageCarousel';
 
 /**
  * True if the listing has a parsed OP distinct from the current price (FIX-01).
@@ -40,6 +40,8 @@ export default function ListingCard({
   const known = hasKnownOp(listing);
   const delta = known ? dropPct(listing.currentPrice, listing.originalPrice as number) : null;
   const src = listing.imageUrl ?? imageUrl(listing.imageId, 800);
+  // Full gallery when available; otherwise the single resolvable image.
+  const gallery = listing.imageUrls?.length ? listing.imageUrls : [src].filter(Boolean);
   const project = safeProjectName(listing.project, listing.community);
   return (
     <article
@@ -48,6 +50,11 @@ export default function ListingCard({
       role="button"
       aria-label={`Inquire about ${project ?? listing.community} in ${listing.community}`}
       onKeyDown={(e) => {
+        // Only the card itself should open the modal on Enter/Space. The
+        // carousel's arrow/dot buttons live inside the card; when one of them
+        // has focus, e.target !== e.currentTarget — let their own handlers run
+        // so paging a gallery never fires the inquire action.
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
           e.preventDefault();
           onInquire(listing.ref);
@@ -55,30 +62,30 @@ export default function ListingCard({
       }}
       className="cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card transition active:shadow-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:border-slate-800 dark:bg-slate-900"
     >
-      <div className="relative aspect-[16/9] bg-slate-200 dark:bg-slate-800">
-        <Image
-          src={src}
-          alt={project ?? listing.community}
-          fill
-          sizes="(min-width: 640px) 50vw, 100vw"
-          priority={priority}
-          loading={priority ? undefined : 'lazy'}
-          className="object-cover"
-        />
-        {delta !== null && (
-          <div
-            className={`absolute top-2 right-2 rounded-full bg-white/95 px-2 py-0.5 text-xs font-mono font-semibold tabular-nums backdrop-blur ${dropColor(
-              delta,
-            )} dark:bg-slate-900/90`}
-          >
-            {delta.toFixed(1)}% vs OP
-          </div>
-        )}
-        <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
-          {listing.type === 'off_plan' ? <Hammer size={10} /> : <Key size={10} />}
-          {listing.type === 'off_plan' ? 'Off-plan' : 'Ready'}
-        </div>
-      </div>
+      <ImageCarousel
+        images={gallery}
+        alt={project ?? listing.community}
+        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+        priority={priority}
+        className="aspect-[16/9]"
+        overlay={
+          <>
+            {delta !== null && (
+              <div
+                className={`pointer-events-none absolute top-2 right-2 z-10 rounded-full bg-white/95 px-2 py-0.5 text-xs font-mono font-semibold tabular-nums backdrop-blur ${dropColor(
+                  delta,
+                )} dark:bg-slate-900/90`}
+              >
+                {delta.toFixed(1)}% vs OP
+              </div>
+            )}
+            <div className="pointer-events-none absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
+              {listing.type === 'off_plan' ? <Hammer size={10} /> : <Key size={10} />}
+              {listing.type === 'off_plan' ? 'Off-plan' : 'Ready'}
+            </div>
+          </>
+        }
+      />
       <div className="p-4">
         <p className="line-clamp-1 font-medium text-slate-900 dark:text-slate-100">
           {project ?? '—'}

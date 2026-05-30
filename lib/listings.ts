@@ -1,5 +1,5 @@
 import raw from '@/data/listings.json';
-import { dropPct, opaqueIdFromRef } from './format';
+import { dropPct, opaqueIdFromRef, formatAED } from './format';
 
 export type ListingType = 'off_plan' | 'ready';
 export type Beds = number | 'studio' | '4+';
@@ -20,6 +20,8 @@ export interface Listing {
   imageId: string;
   /** Preferred when present — points at the Blob or source CDN directly. */
   imageUrl?: string | null;
+  /** Full gallery (Blob preferred, source CDN fallback). First entry === imageUrl. */
+  imageUrls?: string[];
   // Broker template fields (Variables.pdf) — all optional.
   unitType?: string | null;
   bathrooms?: number | null;
@@ -70,6 +72,22 @@ export const findByOpaqueId = seedMaps.findByOpaqueId;
 
 export function findByRef(ref: string): Listing | undefined {
   return listings.find((l) => l.ref === ref);
+}
+
+/**
+ * Build the WhatsApp enquiry message a buyer sends to Jad.
+ *
+ * SECURITY/PRIVACY: this MUST NOT contain the raw source reference
+ * (listing.ref). Buyers paste this into WhatsApp, so the only identifier we
+ * expose is the opaque internal id (same `u-xxxxxx` used in the public URL),
+ * which Jad and we can map back to the real listing on our side.
+ */
+export function buildEnquiryText(listing: Listing, heading?: string): string {
+  const id = opaqueIdFromRef(listing.ref);
+  const title = heading ?? listing.project;
+  return `Hi Jad, I'm interested in ${title} (Ref: ${id}) — AED ${formatAED(
+    listing.currentPrice,
+  )}. Is it still available?`;
 }
 
 export const allCommunities = Array.from(new Set(listings.map((l) => l.community))).sort();

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import { X, CheckCircle2, MessageCircle } from 'lucide-react';
 
 // Jad's direct WhatsApp — the broker buyers reach for instant contact.
 const JAD_WHATSAPP = '971585276222';
 import type { Listing } from '@/lib/listings';
+import { buildEnquiryText } from '@/lib/listings';
 import { formatAED, dropPct, dropColor, bedsLabel, imageUrl, formatSqm } from '@/lib/format';
+import ImageCarousel from './ImageCarousel';
 
 const FOCUSABLE_SEL =
   'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
@@ -153,6 +154,9 @@ export default function LeadModal({
   // Unsplash URL built from an empty imageId. Use a truthy check and bail
   // out to a CSS-only grey box when neither source is usable.
   const thumbSrc = listing.imageUrl || (listing.imageId ? imageUrl(listing.imageId, 200) : '');
+  // Gallery: prefer the full multi-image array; fall back to the single
+  // resolvable image so older rows still render one photo.
+  const gallery = listing.imageUrls?.length ? listing.imageUrls : thumbSrc ? [thumbSrc] : [];
 
   // FIX-06: header concatenates project + subLocation, but upstream sometimes
   // passes the community as subLocation when they're identical (e.g. "Terra
@@ -183,9 +187,11 @@ export default function LeadModal({
   // Direct-contact path: pre-fill a WhatsApp message to Jad referencing this
   // exact unit so he can identify it instantly. This is an alternative to the
   // lead form — no sign-up required.
-  const waText = encodeURIComponent(
-    `Hi Jad, I'm interested in ${heading}${listing.ref ? ` (Ref: ${listing.ref})` : ''} — AED ${formatAED(listing.currentPrice)}. Is it still available?`,
-  );
+  //
+  // SECURITY/PRIVACY: the enquiry must NOT leak the source PF reference number.
+  // buildEnquiryText embeds the opaque internal id (u-xxxxxx) only — the same
+  // id Jad and we use to look up the listing on our side.
+  const waText = encodeURIComponent(buildEnquiryText(listing, heading));
   const waHref = `https://wa.me/${JAD_WHATSAPP}?text=${waText}`;
 
   const dialog = (
@@ -218,21 +224,17 @@ export default function LeadModal({
           <>
             <h3 id="lead-title" className="text-lg font-semibold pr-8">Get details on this unit</h3>
 
-            <div className="mt-4 flex gap-3 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
-              <div
-                className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-slate-200 dark:bg-slate-700"
-                aria-hidden={thumbSrc ? undefined : true}
-              >
-                {thumbSrc ? (
-                  <Image
-                    src={thumbSrc}
-                    alt={listing.project}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
-                ) : null}
-              </div>
+            {gallery.length > 0 && (
+              <ImageCarousel
+                images={gallery}
+                alt={heading || listing.project}
+                sizes="(min-width: 640px) 28rem, 100vw"
+                priority
+                className="mt-4 aspect-[4/3] w-full rounded-lg"
+              />
+            )}
+
+            <div className="mt-4 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{heading}</p>
                 {metaLine && (
