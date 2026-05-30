@@ -9,7 +9,7 @@ const COPY: Record<Channel, { heading: string; body: React.ReactNode; ctaLabel: 
       <>We just sent a message to your number. Reply <span className="font-mono font-semibold">YES</span> to start receiving alerts.</>
     ),
     ctaLabel: 'Open WhatsApp',
-    ctaHref: 'https://wa.me/971500000000',
+    ctaHref: 'https://wa.me/971585276222',
   },
   telegram: {
     heading: 'Confirm in Telegram',

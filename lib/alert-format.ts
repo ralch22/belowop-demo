@@ -40,7 +40,10 @@ function locationLine(ctx: AlertContext): string {
 }
 
 export function brokerWhatsappNumber(): string {
-  return process.env.BROKER_WHATSAPP_DIRECT?.replace(/^\+/, '') ?? '971500000000';
+  // Jad's direct WhatsApp (the broker buyers should reach). Overridable via env,
+  // but defaults to the real number so alerts never ship a placeholder.
+  const raw = process.env.BROKER_WHATSAPP_DIRECT?.replace(/^\+/, '').trim();
+  return raw && raw.length > 0 ? raw : '971585276222';
 }
 
 function bullets(ctx: AlertContext): string[] {
@@ -103,7 +106,7 @@ export function formatTelegram(ctx: AlertContext): string {
   lines.push(`*Selling Price*: *${e(formatAedShort(ctx.current) + ' AED')}* \\| ${e(formatUsdShort(ctx.current))} 🔥`);
   if (ctx.dropPct) lines.push(`📉 ${Math.abs(ctx.dropPct).toFixed(0)}% below OP \\(was ${e(formatAedShort(ctx.original) + ' AED')}\\)`);
   lines.push('');
-  lines.push(`For serious inquiries: [WhatsApp Rami](https://wa.me/${brokerWhatsappNumber()})`);
+  lines.push(`For serious inquiries: [WhatsApp Jad](https://wa.me/${brokerWhatsappNumber()})`);
   lines.push(`[See all units](${ctx.webUrl})`);
   return lines.join('\n');
 }

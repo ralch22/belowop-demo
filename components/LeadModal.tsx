@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { X, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2, MessageCircle } from 'lucide-react';
+
+// Jad's direct WhatsApp — the broker buyers reach for instant contact.
+const JAD_WHATSAPP = '971585276222';
 import type { Listing } from '@/lib/listings';
 import { formatAED, dropPct, dropColor, bedsLabel, imageUrl, formatSqm } from '@/lib/format';
 
@@ -29,13 +33,21 @@ export default function LeadModal({
   const [submitted, setSubmitted] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
+  // The dialog is rendered into a portal on document.body (see bottom of this
+  // component). Tracking mount lets us avoid touching `document` during SSR and
+  // run autofocus only once the portal content is actually in the DOM.
+  const [mounted, setMounted] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    nameRef.current?.focus();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) nameRef.current?.focus();
+  }, [mounted]);
 
   useEffect(() => {
     // Remember whatever had focus before the modal opened, so we can restore
@@ -168,7 +180,15 @@ export default function LeadModal({
   const phoneError = (phoneTouched || submitted) && !phone;
   const showErrorHint = submitted && (!name || !phone || !consent) && !submitting;
 
-  return (
+  // Direct-contact path: pre-fill a WhatsApp message to Jad referencing this
+  // exact unit so he can identify it instantly. This is an alternative to the
+  // lead form — no sign-up required.
+  const waText = encodeURIComponent(
+    `Hi Jad, I'm interested in ${heading}${listing.ref ? ` (Ref: ${listing.ref})` : ''} — AED ${formatAED(listing.currentPrice)}. Is it still available?`,
+  );
+  const waHref = `https://wa.me/${JAD_WHATSAPP}?text=${waText}`;
+
+  const dialog = (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
@@ -191,7 +211,7 @@ export default function LeadModal({
         {done ? (
           <div className="py-8 text-center">
             <CheckCircle2 className="mx-auto text-green-600 dark:text-green-400" size={48} />
-            <h3 className="mt-3 text-lg font-semibold">Thanks. Rami will WhatsApp you shortly.</h3>
+            <h3 className="mt-3 text-lg font-semibold">Thanks. Jad will WhatsApp you shortly.</h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Usually within the hour during business hours.</p>
           </div>
         ) : (
@@ -327,6 +347,21 @@ export default function LeadModal({
                   {!consent && 'Tick the consent box'}
                 </p>
               )}
+
+              <div className="flex items-center gap-3 py-1" aria-hidden>
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">or</span>
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              </div>
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-[#25D366] py-2.5 text-sm font-medium text-white transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
+              >
+                <MessageCircle size={16} /> Message Jad directly on WhatsApp
+              </a>
+
               <p className="text-center text-xs text-slate-600 dark:text-slate-400">We&apos;ll WhatsApp you back within the hour.</p>
             </form>
           </>
@@ -334,6 +369,9 @@ export default function LeadModal({
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(dialog, document.body);
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

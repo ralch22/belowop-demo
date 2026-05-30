@@ -72,7 +72,7 @@ ${sample.handover && sample.type === 'off_plan' ? `*Handover*: ${sample.handover
 📉 ${dropAbs}% below OP (was ${formatAedShort(sample.originalPrice)} AED)
 
 `}
-              <a className="text-blue-600 hover:underline" href={`https://wa.me/${brokerWa}`}>WhatsApp Rami</a>
+              <a className="text-blue-600 hover:underline" href={`https://wa.me/${brokerWa}`}>WhatsApp Jad</a>
               {'  ·  '}
               <a className="text-blue-600 hover:underline" href={`/?inquire=${opaqueOf(sample.ref)}`}>See all units</a>
             </div>
