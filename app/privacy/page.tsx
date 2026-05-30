@@ -20,7 +20,7 @@ export default function PrivacyPage() {
 
       <Section title="What we collect">
         <p>When you submit an inquiry through this site we collect:</p>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc ps-5 space-y-1">
           <li><strong>Name</strong> — to address you in our reply.</li>
           <li><strong>WhatsApp number</strong> — to route the inquiry to a licensed broker who will contact you back.</li>
           <li><strong>Optional message</strong> — any additional context you choose to share.</li>
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
           record is stored in our database (Neon Postgres, hosted in the EU region). The following sub-processors
           handle data on our behalf, under written contract:
         </p>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc ps-5 space-y-1">
           <li>Vercel — hosting and serverless functions.</li>
           <li>Neon — managed Postgres database (EU region).</li>
           <li>Telegram — broker notification delivery channel.</li>
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
 
       <Section title="Cookies">
         <p>This site uses two cookies, neither of which tracks you across other sites:</p>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc ps-5 space-y-1">
           <li>
             <code className="font-mono">belowop_admin</code> — an HttpOnly, Secure, SameSite=Lax session cookie used
             <strong> only</strong> on the admin dashboard. Never set on a normal visit.
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
 
       <Section title="Your rights">
         <p>Under PDPL Articles 13–19 you have the right to:</p>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc ps-5 space-y-1">
           <li>Access the personal data we hold about you.</li>
           <li>Correct anything inaccurate.</li>
           <li>Request deletion (&ldquo;right to be forgotten&rdquo;).</li>

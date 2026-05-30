@@ -112,7 +112,7 @@ export default function ListingTable({
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900">
       <table className="w-full min-w-[768px] text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <thead className="bg-slate-50 text-start text-xs font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
           <tr>
             <th className="w-16 px-4 py-3"></th>
             <SortableHeader
@@ -130,7 +130,7 @@ export default function ListingTable({
               sortable={false}
             />
             <th className="px-4 py-3 text-center">Beds</th>
-            <th className="px-4 py-3 text-right">Size</th>
+            <th className="px-4 py-3 text-end">Size</th>
             <SortableHeader
               label="Price (AED)"
               sortKey="price"
@@ -243,10 +243,10 @@ export default function ListingTable({
                 <td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">
                   <CellLink href={href}>{bedsLabel(l.beds)}</CellLink>
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-end font-mono tabular-nums text-slate-700 dark:text-slate-300">
                   <CellLink href={href}>{formatSqm(l.sqft)}</CellLink>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-end">
                   <CellLink href={href}>
                     <div className="font-mono font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                       {formatAED(l.currentPrice)}
@@ -262,10 +262,10 @@ export default function ListingTable({
                     )}
                   </CellLink>
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                <td className="px-4 py-3 text-end font-mono tabular-nums text-slate-600 dark:text-slate-400">
                   <CellLink href={href}>{formatPricePerSqm(l.currentPrice, l.sqft)}</CellLink>
                 </td>
-                <td className="px-4 py-3 text-right text-xs text-slate-500 dark:text-slate-400">
+                <td className="px-4 py-3 text-end text-xs text-slate-500 dark:text-slate-400">
                   <CellLink href={href}>{relativeTime(l.listedAt)}</CellLink>
                 </td>
               </tr>
@@ -318,7 +318,7 @@ function SortableHeader({
   align?: 'right' | 'left' | 'center';
   sortable?: boolean;
 }) {
-  const cls = align === 'right' ? 'px-4 py-3 text-right' : 'px-4 py-3';
+  const cls = align === 'right' ? 'px-4 py-3 text-end' : 'px-4 py-3';
   if (!sortable) {
     return <th className={cls}>{label}</th>;
   }

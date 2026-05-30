@@ -184,6 +184,12 @@ export async function GET(req: Request) {
   // Pre-fetch + inline as data URIs. Skips next/og's built-in loader, which
   // fails for hosts that block its default UA (PF CDN, possibly others).
   const imageIds = await inlineImages(rawImageUrls);
+  // Zero usable source images → render the text-only brand card instead of a
+  // blank white collage. This happens for legacy/seed rows with no real photos
+  // and whenever every upstream fetch fails or returns WebP (which satori can't
+  // rasterize). The branded card still carries project + price via the bottom
+  // overlay strip below, so a share/alert never ships an empty hero.
+  const hasImages = imageIds.length > 0;
 
   // FIX-01: only show the drop pill when a real Original Price is known. DB
   // rows with no parsed OP arrive here as 0 (Number(null)); dropPct on those
@@ -226,8 +232,20 @@ export async function GET(req: Request) {
           position: 'relative',
         }}
       >
-        {/* Image collage */}
-        <div style={{ display: 'flex', flex: 1, gap: 4, padding: 4, background: 'white' }}>
+        {/* Image collage — or, with zero usable sources, a text-only brand card. */}
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            gap: 4,
+            padding: 4,
+            background: hasImages
+              ? 'white'
+              : 'linear-gradient(135deg, #0F172A 0%, #134E4A 62%, #0F766E 100%)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {imageIds.length === 1 && (
             <img src={imageIds[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
@@ -246,6 +264,43 @@ export async function GET(req: Request) {
           {imageIds.length >= 4 && imageIds.slice(0, 4).map((src, i) => (
             <img key={i} src={src} style={{ width: '25%', height: '100%', objectFit: 'cover' }} />
           ))}
+          {!hasImages && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 18,
+                // lift the wordmark above the bottom overlay strip's reach
+                marginBottom: 120,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                <div
+                  style={{
+                    width: 76,
+                    height: 76,
+                    background: BRAND_TEAL,
+                    borderRadius: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 46,
+                    fontWeight: 800,
+                    color: 'white',
+                  }}
+                >
+                  B
+                </div>
+                <span style={{ fontSize: 60, fontWeight: 800, letterSpacing: 1, color: 'white' }}>
+                  BELOW OP
+                </span>
+              </div>
+              <span style={{ fontSize: 26, color: '#94A3B8', letterSpacing: 0.5 }}>
+                Distress deals, Dubai
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Top-right drop pill — only when a real OP is known */}
@@ -286,30 +341,34 @@ export async function GET(req: Request) {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, color: 'white' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  background: BRAND_TEAL,
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: 'white',
-                }}
-              >
-                B
+            {/* Brand row lives in the bottom strip only when a photo collage is
+                shown above; the text-only card already carries the wordmark. */}
+            {hasImages && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    background: BRAND_TEAL,
+                    borderRadius: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: 'white',
+                  }}
+                >
+                  B
+                </div>
+                <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: 0.5 }}>
+                  BELOW OP
+                </span>
+                <span style={{ fontSize: 18, color: '#94A3B8', marginLeft: 6 }}>
+                  · Distress deals, Dubai
+                </span>
               </div>
-              <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: 0.5 }}>
-                BELOW OP
-              </span>
-              <span style={{ fontSize: 18, color: '#94A3B8', marginLeft: 6 }}>
-                · Distress deals, Dubai
-              </span>
-            </div>
+            )}
             <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: -1, lineHeight: 1.05 }}>
               {headline}
             </div>

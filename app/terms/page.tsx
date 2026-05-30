@@ -51,7 +51,7 @@ export default function TermsPage() {
 
       <Section title="5. Acceptable use">
         <p>You agree not to:</p>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc ps-5 space-y-1">
           <li>Submit false or misleading information through the inquiry form.</li>
           <li>Submit another person&apos;s WhatsApp number without their consent.</li>
           <li>Scrape, mirror, or republish listings or alert messages without written permission.</li>

@@ -212,7 +212,7 @@ export default function LeadModal({
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-400 dark:hover:bg-slate-800"
+          className="absolute end-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:text-slate-400 dark:hover:bg-slate-800"
         >
           <X size={18} />
         </button>
@@ -225,7 +225,7 @@ export default function LeadModal({
           </div>
         ) : (
           <>
-            <h3 id="lead-title" className="text-lg font-semibold pr-8">Get details on this unit</h3>
+            <h3 id="lead-title" className="text-lg font-semibold pe-8">Get details on this unit</h3>
 
             {gallery.length > 0 && (
               <ImageCarousel
@@ -233,7 +233,10 @@ export default function LeadModal({
                 alt={heading || listing.project}
                 sizes="(min-width: 640px) 28rem, 100vw"
                 priority
-                className="mt-4 aspect-[4/3] w-full rounded-lg"
+                // `modal-hero` names this element for the View Transitions API
+                // (globals.css → view-transition-name: lead-hero) so the modal
+                // hero morphs in/out smoothly on supporting browsers.
+                className="modal-hero mt-4 aspect-[4/3] w-full rounded-lg"
               />
             )}
 
@@ -262,7 +265,7 @@ export default function LeadModal({
                     <>
                       {' '}
                       <span className={`font-semibold ${dropColor(delta)}`}>{delta.toFixed(1)}%</span>
-                      <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
+                      <span className="ms-1 text-xs text-slate-600 dark:text-slate-400">vs OP</span>
                     </>
                   )}
                 </p>
@@ -289,7 +292,7 @@ export default function LeadModal({
               </Field>
               <Field label="WhatsApp number">
                 <div className="flex">
-                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
+                  <span className="inline-flex items-center rounded-s-md border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">+971</span>
                   <input
                     required
                     type="tel"
@@ -299,7 +302,7 @@ export default function LeadModal({
                     onChange={(e) => setPhone(e.target.value)}
                     onBlur={() => setPhoneTouched(true)}
                     aria-invalid={phoneError || undefined}
-                    className={`block w-full rounded-r-md border bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-800 ${
+                    className={`block w-full rounded-e-md border bg-white px-3 py-2 text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:bg-slate-800 ${
                       phoneError
                         ? 'border-red-500 dark:border-red-500'
                         : 'border-slate-300 dark:border-slate-700'

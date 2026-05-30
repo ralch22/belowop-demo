@@ -72,14 +72,14 @@ export default function ListingCard({
           <>
             {delta !== null && (
               <div
-                className={`pointer-events-none absolute top-2 right-2 z-10 rounded-full bg-white/95 px-2 py-0.5 text-xs font-mono font-semibold tabular-nums backdrop-blur ${dropColor(
+                className={`pointer-events-none absolute top-2 end-2 z-10 rounded-full bg-white/95 px-2 py-0.5 text-xs font-mono font-semibold tabular-nums backdrop-blur ${dropColor(
                   delta,
                 )} dark:bg-slate-900/90`}
               >
                 {delta.toFixed(1)}% vs OP
               </div>
             )}
-            <div className="pointer-events-none absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
+            <div className="pointer-events-none absolute top-2 start-2 z-10 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur">
               {listing.type === 'off_plan' ? <Hammer size={10} /> : <Key size={10} />}
               {listing.type === 'off_plan' ? 'Off-plan' : 'Ready'}
             </div>
