@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useRouter, Link } from '@/i18n/navigation';
+import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import {
   applyFilters,
   filtersFromParams,
@@ -13,6 +13,7 @@ import {
 } from '@/lib/listings';
 import { relativeTime } from '@/lib/format';
 import FilterBar from './FilterBar';
+import NlSearchBar from './NlSearchBar';
 import ListingTable from './ListingTable';
 import ListingCard from './ListingCard';
 import ActiveFilters from './ActiveFilters';
@@ -38,6 +39,7 @@ export default function ListingsView({
   initialListings,
   dataSource = 'seed',
   lastIngestAt = null,
+  variant = 'home',
 }: {
   initialListings: PublicListing[];
   dataSource?: 'db' | 'seed';
@@ -48,9 +50,17 @@ export default function ListingsView({
    * listing's publication date (an approximation used in seed/dev mode).
    */
   lastIngestAt?: string | null;
+  /**
+   * 'home' — marketing hero + compact NL search bar above the filters.
+   * 'search' — broker-focused hero with the NL search bar front-and-centre
+   * (the dedicated /search page). Results render identically in both.
+   */
+  variant?: 'home' | 'search';
 }) {
   const t = useTranslations('home');
+  const ts = useTranslations('search');
   const router = useRouter();
+  const pathname = usePathname();
   const search = useSearchParams();
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
@@ -131,52 +141,93 @@ export default function ListingsView({
 
   useEffect(() => { setPage(1); }, [filters]);
 
+  // Keep the user on the current path (home '/' or '/search') when mutating
+  // query params — the i18n router re-applies the locale prefix.
   const updateParams = useCallback(
     (next: Partial<Filters>) => {
       const params = paramsFromFilters(new URLSearchParams(search.toString()), next);
-      router.replace(`/?${params.toString()}`, { scroll: false });
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, search],
+    [router, pathname, search],
+  );
+
+  // Apply a full NL-search result: layer the returned filters over an explicit
+  // reset so stale filters (and any prior sort) are cleared, then sync the URL.
+  const applyNlSearch = useCallback(
+    (next: Filters) => {
+      updateParams({
+        type: 'all',
+        beds: 'any',
+        community: undefined,
+        developer: undefined,
+        minDropPct: undefined,
+        maxPrice: undefined,
+        sort: 'newest',
+        ...next,
+      });
+    },
+    [updateParams],
   );
 
   const openInquire = useCallback(
     (opaqueId: string) => {
       const params = new URLSearchParams(search.toString());
       params.set('inquire', opaqueId);
-      router.replace(`/?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [router, search],
+    [router, pathname, search],
   );
 
   const closeInquire = useCallback(() => {
     const params = new URLSearchParams(search.toString());
     params.delete('inquire');
-    router.replace(`/?${params.toString()}`, { scroll: false });
-  }, [router, search]);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname, search]);
 
   return (
     <>
-      <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 dark:border-slate-800">
-        {/* FIX-13: compressed hero — H1 smaller, subhead dropped. */}
-        <div className="mx-auto max-w-content px-4 py-5 sm:px-6 sm:py-6">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            {t('heroTitle')}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              {t('live')} · {t('unitsSuffix', { count: String(initialListings.length) })}
-              {lastRefreshedLabel ? ` · ${t('refreshedSuffix', { time: lastRefreshedLabel })}` : ''}
-            </span>
-            {dataSource === 'seed' && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span>{t('demoData')}</span>
-              </>
-            )}
+      {variant === 'search' ? (
+        <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 dark:border-slate-800">
+          <div className="mx-auto max-w-content px-4 py-8 sm:px-6 sm:py-10">
+            <h1 className="text-center text-2xl sm:text-3xl font-semibold tracking-tight">
+              {ts('heroTitle')}
+            </h1>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-500 dark:text-slate-400">
+              {ts('heroSubtitle')}
+            </p>
+            <div className="mt-5">
+              <NlSearchBar onApply={applyNlSearch} prominent autoFocus />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 dark:border-slate-800">
+          {/* FIX-13: compressed hero — H1 smaller, subhead dropped. */}
+          <div className="mx-auto max-w-content px-4 py-5 sm:px-6 sm:py-6">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+              {t('heroTitle')}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                {t('live')} · {t('unitsSuffix', { count: String(initialListings.length) })}
+                {lastRefreshedLabel ? ` · ${t('refreshedSuffix', { time: lastRefreshedLabel })}` : ''}
+              </span>
+              {dataSource === 'seed' && (
+                <>
+                  <span className="text-slate-400">·</span>
+                  <span>{t('demoData')}</span>
+                </>
+              )}
+            </div>
+            <div className="mt-4">
+              <NlSearchBar onApply={applyNlSearch} />
+            </div>
+          </div>
+        </section>
+      )}
 
       <FilterBar filters={filters} onChange={updateParams} total={initialListings.length} filtered={filtered.length} />
 

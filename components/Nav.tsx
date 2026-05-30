@@ -14,6 +14,7 @@ import clsx from 'clsx';
 // 'nav' message namespace so EN/AR share one component.
 const links = [
   { href: '/', key: 'listings' },
+  { href: '/search', key: 'search' },
   { href: '/alerts', key: 'alerts' },
   { href: '/brokers', key: 'brokers' },
   { href: '/about', key: 'about' },

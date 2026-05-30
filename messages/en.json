@@ -12,6 +12,10 @@
       "title": "{name} — RERA Broker Verification | Below OP",
       "description": "Verify the RERA licence status of {name} at {firm} using public Dubai Land Department records.",
       "notFoundTitle": "Broker not found | Below OP"
+    },
+    "search": {
+      "title": "Smart Search — Describe what you're looking for | Below OP",
+      "description": "Find Dubai below-OP units in plain English. Describe your client's brief and we'll match beds, area, budget, and discount instantly."
     }
   },
   "a11y": {
@@ -19,6 +23,7 @@
   },
   "nav": {
     "listings": "Listings",
+    "search": "Smart search",
     "alerts": "Alerts",
     "brokers": "Verify a broker",
     "about": "About",
@@ -49,6 +54,22 @@
     "emptyTitle": "No listings match your filters.",
     "emptyBody": "Try relaxing one of the filters above.",
     "resetFilters": "Reset filters"
+  },
+  "search": {
+    "heroTitle": "Describe what your client is looking for.",
+    "heroSubtitle": "Type a brief in plain English — we'll translate it into the right filters and show matching below-OP units.",
+    "label": "Search listings in plain language",
+    "placeholder": "e.g. 2-bed in Dubai Marina under 3M, at least 10% below OP, off-plan",
+    "hint": "Plain-English search — beds, area, budget, discount, and more.",
+    "submit": "Search",
+    "examples": [
+      "2-bed in Dubai Marina under 3M",
+      "Off-plan studios with the biggest discount",
+      "Ready 3-bed in Business Bay, cheapest first"
+    ],
+    "errLimit": "You've reached the search limit for now. Please try again in a little while.",
+    "errGeneric": "Couldn't run that search. Please try again.",
+    "errNetwork": "Couldn't reach the server. Check your connection and retry."
   },
   "filters": {
     "all": "All",
