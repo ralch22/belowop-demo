@@ -7,13 +7,17 @@
  *
  * Auth: Authorization: Bearer <ADMIN_TOKEN>
  * Usage:
- *   POST /api/admin/db?action=migrate   → applies all SQL files in db/migrations
- *   POST /api/admin/db?action=seed      → inserts data/listings.json
- *   POST /api/admin/db?action=status    → reports table sizes
+ *   POST /api/admin/db?action=migrate        → applies all SQL files in db/migrations
+ *   POST /api/admin/db?action=seed           → inserts data/listings.json
+ *   POST /api/admin/db?action=status         → reports table sizes
  *   POST /api/admin/db?action=migrate-and-seed
+ *   POST /api/admin/db?action=brokers-import → applies ONLY migration 0008, then
+ *        upserts the RERA registry from the request body (raw CSV). The CSV is
+ *        gitignored PII and is NOT bundled, so it's streamed up at import time.
  */
 import { NextResponse } from 'next/server';
-import { sql, query } from '@/lib/db';
+import { sql, query, pool } from '@/lib/db';
+import { parseBrokersCsv, BROKER_COLUMNS, brokerRowToValues } from '@/lib/brokers-csv';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
@@ -149,6 +153,58 @@ async function status() {
   return Object.fromEntries(r.rows.map((row) => [row.table, row.count]));
 }
 
+/**
+ * Load the RERA broker registry from an uploaded CSV body.
+ *
+ * Applies ONLY migration 0008 first (idempotent CREATE TABLE / RLS) — never the
+ * full migrate, which would re-run 0005's data UPDATEs against live listings.
+ * Then batched-upserts every row so 8.7k brokers land well inside maxDuration.
+ */
+async function importBrokers(csv: string) {
+  const ddl = readFileSync(join(process.cwd(), 'db', 'migrations', '0008_rera_brokers.sql'), 'utf8');
+  await query(ddl);
+
+  const { rows, total, skipped, missingColumns } = parseBrokersCsv(csv);
+  if (missingColumns) throw new Error('CSV missing required columns broker_number / broker_name_en');
+  if (rows.length === 0) throw new Error('no importable broker rows in request body');
+
+  const cols = [...BROKER_COLUMNS];
+  const updateSet = cols
+    .filter((c) => c !== 'broker_number' && c !== 'source')
+    .map((c) => `${c} = EXCLUDED.${c}`)
+    .concat('updated_at = NOW()')
+    .join(', ');
+
+  // 400 rows × 15 cols = 6000 params/statement — well under Postgres' 65535 cap.
+  const BATCH = 400;
+  let upserted = 0;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const slice = rows.slice(i, i + BATCH);
+    const params: unknown[] = [];
+    const tuples = slice.map((row) => {
+      const vals = brokerRowToValues(row);
+      const placeholders = vals.map((_, j) => `$${params.length + j + 1}`);
+      params.push(...vals);
+      return `(${placeholders.join(',')})`;
+    });
+    const text =
+      `INSERT INTO rera_brokers (${cols.join(',')}) VALUES ${tuples.join(',')} ` +
+      `ON CONFLICT (broker_number) DO UPDATE SET ${updateSet}`;
+    const res = await pool.query(text, params);
+    upserted += res.rowCount ?? slice.length;
+  }
+
+  const counts = await sql<{ total: number; active: number; expired: number; firms: number }>`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE license_end >= CURRENT_DATE)::int AS active,
+      COUNT(*) FILTER (WHERE license_end <  CURRENT_DATE)::int AS expired,
+      COUNT(DISTINCT firm_domain)::int AS firms
+    FROM rera_brokers WHERE hidden_at IS NULL;
+  `;
+  return { parsed: rows.length, total, skipped, upserted, counts: counts.rows[0] };
+}
+
 export async function POST(req: Request) {
   if (!authorize(req)) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
@@ -164,6 +220,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, migrate: m, seed: s, status: st });
     }
     if (action === 'status') return NextResponse.json({ ok: true, status: await status() });
+    if (action === 'brokers-import') {
+      const csv = await req.text();
+      if (!csv || csv.length < 50) {
+        return NextResponse.json(
+          { ok: false, error: 'empty body — POST the broker CSV as the raw request body' },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json({ ok: true, ...(await importBrokers(csv)) });
+    }
     if (action === 'wipe-seed') {
       // Delete leads FIRST — leads.listing_id FKs to listings(id), and the
       // test leads point at seeded listings we're about to drop.
