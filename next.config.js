@@ -113,7 +113,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   `img-src 'self' data: blob: ${IMG_ORIGINS.join(' ')}`,
-  `connect-src 'self' ${IMG_ORIGINS.join(' ')}`,
+  `connect-src 'self' https://vitals.vercel-insights.com ${IMG_ORIGINS.join(' ')}`,
   "manifest-src 'self'",
   "worker-src 'self'",
   'upgrade-insecure-requests',
