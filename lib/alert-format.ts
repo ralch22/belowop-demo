@@ -40,9 +40,16 @@ export interface AlertContext {
   webUrl: string;
 }
 
-// Brand links from the WhatsApp content spec (env-overridable, spec defaults).
-const COMMUNITY_LINK = process.env.WHATSAPP_COMMUNITY_URL ?? 'https://bit.ly/Dubaipropertydeals';
-const CHANNEL_LINK = process.env.WHATSAPP_CHANNEL_URL ?? 'https://bit.ly/DubaiPropertyDealsChannel';
+// Brand links from the WhatsApp content spec. These are the exact short links
+// the content team uses across every post, so they're pinned here (not read
+// from env) to keep the alert footer deterministic and on-spec.
+const COMMUNITY_LINK = 'https://bit.ly/Dubaipropertydeals';
+const CHANNEL_LINK = 'https://bit.ly/DubaiPropertyDealsChannel';
+
+/** True only for a genuine below-OP discount (real, positive original < current). */
+function hasDiscount(ctx: AlertContext): boolean {
+  return ctx.original > 0 && ctx.original > ctx.current;
+}
 
 /**
  * "Project, Area" line per the broker template. We use community as the Area,
@@ -119,7 +126,7 @@ export function formatWhatsapp(ctx: AlertContext): string {
   if (ctx.paymentStatus) lines.push(`*Payment*: ${ctx.paymentStatus}`);
   if (ctx.developer) lines.push(`*Developer*: *${ctx.developer}*`);
   lines.push('');
-  if (ctx.dropPct) lines.push(`~Original Price: ${formatAedShort(ctx.original)} Ð~`);
+  if (hasDiscount(ctx)) lines.push(`~Original Price: ${formatAedShort(ctx.original)} Ð~`);
   lines.push(`*Selling Price*: *${formatAedShort(ctx.current)} Ð* | ${formatUsdShort(ctx.current)} 🔥`);
   lines.push('');
   lines.push(`For serious inquiries contact:`);
@@ -154,7 +161,7 @@ export function formatTelegram(ctx: AlertContext): string {
   if (ctx.paymentStatus) lines.push(`*Payment*: ${e(ctx.paymentStatus)}`);
   if (ctx.developer) lines.push(`*Developer*: *${e(ctx.developer)}*`);
   lines.push('');
-  if (ctx.dropPct) lines.push(`~${e(`Original Price: ${formatAedShort(ctx.original)} Ð`)}~`);
+  if (hasDiscount(ctx)) lines.push(`~${e(`Original Price: ${formatAedShort(ctx.original)} Ð`)}~`);
   lines.push(`*Selling Price*: *${e(`${formatAedShort(ctx.current)} Ð`)}* \\| ${e(formatUsdShort(ctx.current))} 🔥`);
   lines.push('');
   lines.push(`For serious inquiries contact:`);
