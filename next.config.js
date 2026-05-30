@@ -94,6 +94,14 @@ const IMG_ORIGINS = [
   'https://images.unsplash.com',
 ];
 
+// Next.js dev-mode React Fast Refresh ships `@next/react-refresh-utils`, whose
+// runtime calls `eval()`. With a strict `script-src` (no `'unsafe-eval'`) the
+// browser throws an EvalError at that runtime, the client bundle never finishes
+// evaluating, and React never hydrates — so EVERY interactive control (filters,
+// sort, pagination, the inquire modal) is dead in local dev. Production builds
+// don't use eval, so we only relax the policy in development and keep prod strict.
+const isDev = process.env.NODE_ENV === 'development';
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -101,7 +109,7 @@ const csp = [
   "frame-ancestors 'none'",
   "frame-src 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   `img-src 'self' data: blob: ${IMG_ORIGINS.join(' ')}`,
